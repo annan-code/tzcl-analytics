@@ -562,20 +562,9 @@ function vUsage(){
     card('File operations',fmt(s.outputs.fileOperations),'Files created or edited by Claude','cowork')+
     card('Pull requests',fmt(s.outputs.prsCreated),'Raised with Claude Code','code')+
     card('MCP writes',fmt(s.outputs.mcpWrites),'Actions written back to connected tools','')+
-    card('Actions per prompt',s.agentic.actionsPerPrompt.toFixed(1),
-      'Steps Claude takes per instruction given','cowork')+
+
     card('Est. time saved','~'+fmt(s.timeSaved.hours)+' hrs',"Anthropic's model, assumptions below",'spend')+
     '</div>';
-  h+='<div class="panel"><div class="p-title">What "actions per prompt" means'+
-    '<span class="p-note">rolling 30 days to '+niceDate(s.dataAsOf)+'</span></div>'+
-    '<div class="note" style="margin-top:0">Every instruction someone gives Claude currently '+
-    'produces <b>'+s.agentic.actionsPerPrompt.toFixed(1)+'</b> steps on average — reading a file, '+
-    'running a search, editing something, calling a connected tool. A figure near 1 means people '+
-    'are using Claude as a question-and-answer box. Above about 4 means they are handing over whole '+
-    'tasks and Claude is working through them. This is the one number here that describes <i>how</i> '+
-    'Claude is being used rather than how much, which is why it sits on this page.</div>'+
-    '<div class="note">Read it with care: it is an average across a small organisation, so a single '+
-    'heavy Cowork or Claude Code user moves it. Treat a change of a few tenths as noise.</div></div>';
   h+='<div class="panel"><div class="p-title">How the time saved figure is built'+
     '<span class="p-note">Anthropic\'s default assumptions, editable in the Claude admin console</span></div>'+
     '<div class="tw"><table><thead><tr><th>Verified output</th><th class="n">Minutes saved each</th>'+
@@ -589,7 +578,7 @@ function vUsage(){
   h+='<div class="g2">'+depth(s)+sticky(s)+'</div>';
   h+='<div class="panel">'+fileCats(s)+'</div>';
   h+='<div class="g2">'+skills(s)+connectors(s)+'</div>';
-  h+='<div class="g2">'+projects(s)+coworkTop(s)+'</div>';
+  h+='<div class="g2">'+projects(s)+agenticPanel(s)+'</div>';
   h+=codePanel(s);
   return h;
 }
@@ -657,15 +646,22 @@ function projects(s){
     '</tbody></table></div><div class="note">Every one of these has a single user. Projects are how '+
     'repeat work gets faster, and right now nobody is sharing them.</div></div>';
 }
-function coworkTop(s){
-  return '<div class="panel" style="margin:0"><div class="p-title">Most Cowork sessions'+
-    '<span class="p-note">rolling 30 days to '+niceDate(s.dataAsOf)+' · ranked by sessions, not messages</span>'+
-    '</div><div class="lb">'+
-    s.topCoworkMembers.map((m,i)=>'<div class="lb-row"><div class="lb-i">'+(i+1)+'</div>'+
-      '<div class="lb-n">'+esc(nameOf(m.email))+'<div class="lb-s">'+fmt(m.messages)+' messages</div></div>'+
-      '<div class="lb-v" style="color:var(--cowork)">'+fmt(m.sessions)+
-      '<span class="lb-u">sessions</span></div></div>').join('')+'</div></div>';
+function agenticPanel(s){
+  const a=s.agentic.actionsPerPrompt;
+  return '<div class="panel" style="margin:0"><div class="p-title">How agentic the usage is'+
+    '<span class="p-note">rolling 30 days to '+niceDate(s.dataAsOf)+'</span></div>'+
+    '<div class="k-num cowork" style="font-size:3rem;line-height:1.1">'+a.toFixed(1)+'</div>'+
+    '<div style="font-size:.82rem;color:var(--muted);margin-top:2px">'+
+    'actions Claude takes per instruction given</div>'+
+    '<div class="note">Every prompt someone writes currently produces <b>'+a.toFixed(1)+'</b> steps '+
+    '— reading a file, running a search, making an edit, calling a connected tool. Near 1 would mean '+
+    'people are using Claude as a question-and-answer box. Above about 4 means they are handing over '+
+    'whole tasks and Claude is working through them. This is the one figure here that describes '+
+    '<i>how</i> Claude is used rather than how much.</div>'+
+    '<div class="note">It is an average across a small organisation, so one heavy Cowork or Claude '+
+    'Code user moves it. Treat a change of a few tenths as noise.</div></div>';
 }
+
 function codePanel(s){
   const c=s.claudeCode;
   return '<div class="panel"><div class="p-title">Claude Code</div><div class="cards" style="margin-bottom:0">'+
@@ -751,9 +747,10 @@ function vCost(){
     'usage page, not an estimate. <b>'+mt.usersBilled+' of '+mt.usersTotal+'</b> people have any '+
     'metered usage at all; the other '+(mt.usersTotal-mt.usersBilled)+' are fully covered by their seat.</div>'+
     '<div class="lb">'+mt.top.map((m,i)=>
-      '<div class="lb-row"><div class="lb-i">'+(i+1)+'</div><div class="lb-n">'+
-      esc(nameOf(m.email))+'<div class="lb-s">'+share(m.spend)+'% of the period total</div></div>'+
-      '<div class="lb-v" style="color:var(--spend)">'+gbp(m.spend)+'</div></div>').join('')+'</div>'+
+      '<div class="lb-row"><div class="lb-i">'+(i+1)+'</div><div class="lb-n">'+esc(m.name)+
+      '<div class="lb-s">'+esc(m.title)+' · '+esc(m.email)+'</div></div>'+
+      '<div class="lb-v" style="color:var(--spend)">'+gbp(m.spend)+
+      '<span class="lb-u">'+share(m.spend)+'% of total</span></div></div>').join('')+'</div>'+
     '<div class="note"><b>'+gbp(mt.total)+'</b> in total. No spend cap is set anywhere: the '+
     'organisation limit is '+esc(mt.orgLimit)+', both seat defaults are Unlimited ('+
     mt.seatLimits.standardSeats+' standard, '+mt.seatLimits.premiumSeats+' premium), and all '+
