@@ -578,7 +578,8 @@ function vUsage(){
   h+='<div class="g2">'+depth(s)+sticky(s)+'</div>';
   h+='<div class="panel">'+fileCats(s)+'</div>';
   h+='<div class="g2">'+skills(s)+connectors(s)+'</div>';
-  h+='<div class="g2">'+projects(s)+agenticPanel(s)+'</div>';
+  h+=agenticPanel(s);
+  h+=projects(s);
   h+=codePanel(s);
   return h;
 }
@@ -638,23 +639,43 @@ function connectors(s){
     'back. That gap is where automation would pay.</div></div>';
 }
 function projects(s){
-  const pm=s.projectsMeta;
-  return '<div class="panel" style="margin:0"><div class="p-title">Work streams using Claude'+
-    '<span class="p-note">top 5 org-visible Chat projects, by message volume</span></div>'+
-    '<div class="tw"><table><thead><tr><th>Project</th><th class="n">Threads</th><th class="n">Messages</th>'+
-    '</tr></thead><tbody>'+s.projects.map(p=>'<tr><td>'+esc(p.project)+'</td><td class="n">'+
-      p.conversations+'</td><td class="n">'+fmt(p.messages)+'</td></tr>').join('')+
+  const pm=s.projectsMeta, all=s.projectsAll;
+  const bars=pm.createdByMonth.map(([m,n])=>{
+    const mx=Math.max(...pm.createdByMonth.map(x=>x[1]));
+    return '<div class="bar"><div class="bar-l" style="width:44px">'+esc(m)+'</div>'+
+      '<div class="bar-t"><div class="bar-f" style="width:'+(n/mx*100)+
+      '%;background:var(--chat)"></div></div><div class="bar-v" style="width:32px">'+n+'</div></div>';
+  }).join('');
+  return '<div class="panel"><div class="p-title">Projects'+
+    '<span class="p-note">all '+pm.totalProjects+', from '+esc(pm.source.split(', ')[1])+'</span></div>'+
+    '<div class="cards" style="margin-bottom:14px">'+
+      card('Projects in total',pm.totalProjects,'Created since March, by '+pm.distinctCreators+' different people','chat')+
+      card('Shared with someone',pm.sharedProjects,'The other '+(pm.totalProjects-pm.sharedProjects)+' have a single user','cowork')+
+      card('Used once and dropped',pm.singleConversation,'Only one conversation ever started in them','')+
+    '</div>'+
+    '<div class="p-title" style="margin-top:4px">Projects created each month</div>'+
+    '<div class="bars" style="margin-bottom:14px">'+bars+'</div>'+
+    '<div class="tw" style="max-height:340px;overflow:auto"><table><thead><tr><th>Project</th>'+
+    '<th class="n">Users</th><th class="n">Threads</th><th class="n">Messages</th>'+
+    '<th>Created</th><th>Created by</th></tr></thead><tbody>'+
+    all.map(p=>'<tr><td>'+esc(p.project)+'</td>'+
+      '<td class="n'+(p.users>1?' cowork':'')+'">'+p.users+'</td>'+
+      '<td class="n">'+p.conversations+'</td><td class="n">'+fmt(p.messages)+'</td>'+
+      '<td>'+esc(p.created)+'</td><td>'+esc(nameOf(p.createdBy))+'</td></tr>').join('')+
     '</tbody></table></div>'+
-    '<div class="note"><b>'+pm.created+' projects were created</b> in this window and <b>'+
-    pc(pm.usersWithOneOrMore)+'</b> of people have at least one.</div>'+
-    '<div class="note">This table is the top five by message volume, not the full list, and it only '+
-    'covers projects visible to organisation analytics — <b>private projects do not appear here at '+
-    'all</b>. The "1 user" column therefore says nothing about whether a project is shared. Anyone '+
-    'reading this should not conclude that projects are or are not being shared.</div></div>';
+    '<div class="note"><b>'+pm.totalProjects+' projects exist</b>, holding '+fmt(pm.totalMessages)+
+    ' messages between them. The headline "'+pm.createdInWindow+' projects created" on Claude\'s own '+
+    'analytics counts only the last 30 days, which is why it looks so much smaller.</div>'+
+    '<div class="note"><b>Only '+pm.sharedProjects+' of '+pm.totalProjects+' are shared with anyone.</b> '+
+    'Private projects are visible in this list, so unlike the summary table this is a fair test — and '+
+    'it says project work is almost entirely solo. '+pm.singleConversation+' were used for a single '+
+    'conversation and then abandoned, which suggests people are creating them as a filing habit rather '+
+    'than a place they come back to.</div></div>';
 }
+
 function agenticPanel(s){
   const a=s.agentic.actionsPerPrompt;
-  return '<div class="panel" style="margin:0"><div class="p-title">How agentic the usage is'+
+  return '<div class="panel"><div class="p-title">How agentic the usage is'+
     '<span class="p-note">rolling 30 days to '+niceDate(s.dataAsOf)+'</span></div>'+
     '<div class="k-num cowork" style="font-size:3rem;line-height:1.1">'+a.toFixed(1)+'</div>'+
     '<div style="font-size:.82rem;color:var(--muted);margin-top:2px">'+
