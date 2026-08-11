@@ -48,3 +48,35 @@ Two limitations worth knowing:
 - **The time-saved figure is Anthropic's own model**, driven mostly by an
   assumption of 150 minutes saved per pull request. Treat it as an order of
   magnitude rather than a measurement.
+
+## Two different time windows, on purpose
+
+The dashboard reports on two windows and never mixes them:
+
+- **Monthly adoption** and **Cost** are calendar months (March 2026 onward). Per-user
+  chat, Cowork and Claude Code figures exist as a real monthly series, so these
+  restate cleanly for any month you pick.
+- **Usage detail** is a rolling 30-day snapshot, labelled as such on the page.
+
+That split is forced by the source, not chosen. The headline statistics and member
+tables on `claude.ai/analytics` are hard-wired to a rolling 30 days: the 1W/1M/3M/1Y
+control only redraws the chart beneath them. Clicking 1Y was tested on 11 Aug 2026 and
+every headline figure and table stayed identical.
+
+So there is no way to restate skills, connectors, stickiness, actions-per-prompt or
+time-saved for a past month. **Do not back-fill them.** The agreed approach is to
+capture the snapshot once a month from now on and build the history forward — a real
+time series appears after three or four monthly captures.
+
+The one exception found so far is Projects: the "See all" dialog exposes the full list
+with a created date per project, so history there is recoverable and is already in the
+data (47 projects back to March).
+
+## Per-user spend
+
+Per-user spend comes from `claude.ai/admin-settings/usage` → "Spend limits by user",
+which holds **actual billed amounts in GBP for the current period only** and resets
+monthly. The analytics API's per-user USD figure is a model, not a bill — it was 3x
+below the org-level figure for June — and is deliberately not shown anywhere in the
+dashboard. If per-user spend history matters, it has to be captured monthly before the
+period rolls over.
