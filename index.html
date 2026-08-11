@@ -638,13 +638,19 @@ function connectors(s){
     'back. That gap is where automation would pay.</div></div>';
 }
 function projects(s){
+  const pm=s.projectsMeta;
   return '<div class="panel" style="margin:0"><div class="p-title">Work streams using Claude'+
-    '<span class="p-note">named Chat projects, by message volume</span></div>'+
+    '<span class="p-note">top 5 org-visible Chat projects, by message volume</span></div>'+
     '<div class="tw"><table><thead><tr><th>Project</th><th class="n">Threads</th><th class="n">Messages</th>'+
     '</tr></thead><tbody>'+s.projects.map(p=>'<tr><td>'+esc(p.project)+'</td><td class="n">'+
       p.conversations+'</td><td class="n">'+fmt(p.messages)+'</td></tr>').join('')+
-    '</tbody></table></div><div class="note">Every one of these has a single user. Projects are how '+
-    'repeat work gets faster, and right now nobody is sharing them.</div></div>';
+    '</tbody></table></div>'+
+    '<div class="note"><b>'+pm.created+' projects were created</b> in this window and <b>'+
+    pc(pm.usersWithOneOrMore)+'</b> of people have at least one.</div>'+
+    '<div class="note">This table is the top five by message volume, not the full list, and it only '+
+    'covers projects visible to organisation analytics — <b>private projects do not appear here at '+
+    'all</b>. The "1 user" column therefore says nothing about whether a project is shared. Anyone '+
+    'reading this should not conclude that projects are or are not being shared.</div></div>';
 }
 function agenticPanel(s){
   const a=s.agentic.actionsPerPrompt;
