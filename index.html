@@ -295,8 +295,8 @@ function boot(){
   MONTHS=Object.keys(DATA.months);
   currentMonth=MONTHS[MONTHS.length-1];
   document.getElementById('org').textContent =
-    DATA.meta.org+' · '+DATA.meta.seats+' seats'+
-    (DATA.meta.accounts&&DATA.meta.accounts!==DATA.meta.seats?' · '+DATA.meta.accounts+' accounts':'');
+    DATA.meta.org+' · '+DATA.meta.seatsPurchased+' seats · '+
+    DATA.meta.seatsInUse+' in use · '+DATA.meta.seatsUnused+' unused';
   paintPills(); render();
 }
 function paintPills(){
@@ -356,7 +356,7 @@ function vMonthly(){
   if(!md) return '<div class="nodata">No data for this month.</div>';
   const all=md.members, act=all.filter(m=>m.daysActive>0);
   const sum=k=>act.reduce((a,b)=>a+(b[k]||0),0);
-  const seats=DATA.meta.seats;
+  const seats=DATA.meta.people;
   const waffle='<div class="waffle">'+Array.from({length:seats},(_,i)=>
     '<i class="'+(i<act.length?'':'off')+'"></i>').join('')+'</div>';
 
@@ -364,7 +364,7 @@ function vMonthly(){
   h+='<div class="panel">'+trend()+'</div>';
   h+='<div class="cards">'+
     card('Active users',act.length+' <span class="of">/ '+seats+'</span>',
-      Math.round(act.length/seats*100)+'% of seats used this month, one square per seat','',waffle)+
+      Math.round(act.length/seats*100)+'% of the '+seats+' people who held a seat this month, one square each','',waffle)+
     card('Chat messages',fmt(sum('messages')),
       'Sent in Claude Chat · '+Math.round(sum('messages')/(act.length||1))+' avg per active user','chat')+
     card('Cowork messages',fmt(sum('coworkMessages')),
@@ -572,14 +572,14 @@ function vUsage(){
   return h;
 }
 function depth(s){
-  const a=s.adoptionLevel, seats=DATA.meta.seats;
+  const a=s.adoptionLevel, seats=DATA.meta.people;
   const rows=[['Have a seat',a.allMembers,'var(--chat)'],['Active this month',a.monthly,'var(--chat)'],
     ['Active this week',a.weekly,'var(--chat)'],['Active yesterday',a.daily,'var(--amber)']]
     .map(([l,v,c])=>'<div class="bar"><div class="bar-l">'+l+'</div><div class="bar-t">'+
       '<div class="bar-f" style="width:'+(v/seats*100)+'%;background:'+c+'"></div></div>'+
       '<div class="bar-v">'+v+' ('+Math.round(v/seats*100)+'%)</div></div>').join('');
   return '<div class="panel" style="margin:0"><div class="p-title">Depth of adoption'+
-    '<span class="p-note">of '+seats+' seats</span></div><div class="bars">'+rows+'</div>'+
+    '<span class="p-note">of '+seats+' people with a seat</span></div><div class="bars">'+rows+'</div>'+
     '<div class="note">Breadth is strong and depth is thin. Nearly everyone has used Claude at some '+
     'point this month, but only <b>'+a.daily+'</b> used it yesterday. Daily use is the number to move.</div></div>';
 }
