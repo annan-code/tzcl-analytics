@@ -72,6 +72,43 @@ The one exception found so far is Projects: the "See all" dialog exposes the ful
 with a created date per project, so history there is recoverable and is already in the
 data (47 projects back to March).
 
+### The archive
+
+`history/` holds one JSON file per capture, and every capture ever taken is embedded in
+`data.enc` and shown in the **Snapshot history** panel. `capture.py` writes a new one.
+
+Three rules, and they matter more than the code:
+
+1. **Captures are immutable.** `capture.py` refuses to overwrite one. If a figure was
+   wrong on the day, it was still what the product reported on the day — record the
+   correction separately rather than rewriting history.
+2. **Never invent a missed month.** A gap in the table is honest. A back-filled column
+   is a lie that looks like data.
+3. **Every value is read from the product**, never calculated, projected or estimated.
+
+Per-user spend is the urgent one: `claude.ai/admin-settings/usage` resets each period,
+so if a month is not captured before the reset, the per-person split is gone permanently
+and only the organisation total survives.
+
+## Two kinds of project — only one is counted
+
+Claude has two different things called projects, and the analytics only see one:
+
+- **Chat projects** live in the cloud, can be set public or private, and are what the
+  Projects panel counts (47 of them, back to March).
+- **Cowork projects** live locally on someone's desktop, do not sync to the cloud, and
+  **cannot be shared at all** — Anthropic's documentation states that Cowork projects do
+  not support project sharing on Team and Enterprise plans. They appear nowhere in the
+  organisation analytics; `claude.ai/analytics/cowork` has no projects section, only
+  sessions, users and file categories.
+
+So the real number of projects at TransitionZero is higher than 47 and cannot be
+measured. The dashboard says so on the panel.
+
+Also note that "shared" in the Projects panel means *more than one person has used it*,
+which is not the same as the public/private visibility setting. A project set to public
+that nobody else has opened still shows one user.
+
 ## Per-user spend
 
 Per-user spend comes from `claude.ai/admin-settings/usage` → "Spend limits by user",

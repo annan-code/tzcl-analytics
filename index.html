@@ -115,6 +115,7 @@ h1{font-size:2.35rem;font-weight:700;letter-spacing:-.03em;line-height:1}
 
 /* ── bars ──────────────────────────────────────────────── */
 .bars{display:grid;gap:11px}
+.note.warnbox{border-left:3px solid var(--warn);padding-left:11px}
 .bar{display:flex;align-items:center;gap:14px}
 .bar.click,.bar-c{cursor:pointer;border-radius:4px;padding:2px 4px;margin:-2px -4px}
 .bar.click:hover,.bar-c:hover{background:var(--surface2)}
@@ -580,6 +581,7 @@ function vUsage(){
   h+='<div class="g2">'+skills(s)+connectors(s)+'</div>';
   h+=agenticPanel(s);
   h+=projects(s);
+  h+=historyPanel();
   h+=codePanel(s);
   return h;
 }
@@ -666,11 +668,42 @@ function projects(s){
     '<div class="note"><b>'+pm.totalProjects+' projects exist</b>, holding '+fmt(pm.totalMessages)+
     ' messages between them. The headline "'+pm.createdInWindow+' projects created" on Claude\'s own '+
     'analytics counts only the last 30 days, which is why it looks so much smaller.</div>'+
-    '<div class="note"><b>Only '+pm.sharedProjects+' of '+pm.totalProjects+' are shared with anyone.</b> '+
-    'Private projects are visible in this list, so unlike the summary table this is a fair test — and '+
-    'it says project work is almost entirely solo. '+pm.singleConversation+' were used for a single '+
-    'conversation and then abandoned, which suggests people are creating them as a filing habit rather '+
-    'than a place they come back to.</div></div>';
+    '<div class="note"><b>Only '+pm.sharedProjects+' of '+pm.totalProjects+' have more than one user.</b> '+
+    esc(pm.sharedMeaning)+' '+pm.singleConversation+' projects were used for a single conversation and '+
+    'never returned to, which suggests people create them as a filing habit rather than a place work '+
+    'accumulates.</div>'+
+    '<div class="note warnbox"><b>This counts Chat projects only.</b> '+esc(pm.coworkNote)+'</div></div>';
+}
+
+function historyPanel(){
+  const H=DATA.history||[];
+  const rows=[
+    ['Actions per prompt', c=>c.actionsPerPrompt.toFixed(1)],
+    ['Active this month',  c=>c.adoptionLevel.monthly],
+    ['Active yesterday',   c=>c.adoptionLevel.daily],
+    ['Conversations',      c=>fmt(c.outputs.conversations)],
+    ['Pull requests',      c=>fmt(c.outputs.prsCreated)],
+    ['Projects in total',  c=>c.projectsTotal],
+    ['Projects shared',    c=>c.projectsShared],
+    ['Metered spend',      c=>'\u00a3'+c.meteredTotalGBP.toFixed(2)],
+    ['People billed',      c=>c.meteredUsersBilled],
+  ];
+  const head='<tr><th>Measure</th>'+H.map(c=>'<th class="n">'+esc(niceDate(c.capturedAt))+'</th>').join('')+'</tr>';
+  const body=rows.map(([l,f])=>'<tr><td>'+esc(l)+'</td>'+
+    H.map(c=>'<td class="n">'+f(c)+'</td>').join('')+'</tr>').join('');
+  const one = H.length<2;
+  return '<div class="panel"><div class="p-title">Snapshot history'+
+    '<span class="p-note">'+H.length+' capture'+(H.length===1?'':'s')+' kept</span></div>'+
+    '<div class="note" style="margin-top:0">The figures on this page come from panels that only '+
+    'ever show a rolling 30 days, and per-person spend resets every billing period. Neither can be '+
+    'recovered for a month that has passed. Each monthly refresh therefore stores a copy here, and '+
+    'this table grows into a real trend.</div>'+
+    '<div class="tw"><table><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'+
+    (one?'<div class="note warnbox"><b>History starts here.</b> This is the first capture, so there '+
+      'is nothing to compare against yet. A second column appears at the next monthly refresh and a '+
+      'usable trend after three or four. Nothing in this table is back-filled or estimated — each '+
+      'column is what Claude actually reported on that date.</div>':'')+
+    '</div>';
 }
 
 function agenticPanel(s){
