@@ -381,6 +381,7 @@ function vMonthly(){
     board('Most Cowork messages','in '+currentMonth+', Claude working on files and tasks','coworkMessages','msgs','var(--cowork)',act)+
     board('Most Claude Code sessions','in '+currentMonth+', terminal coding sessions','codeSessions','sessions','var(--code)',act)+
     '</div>';
+  h+=modelPanel();
   h+='<div class="panel">'+usageSplit(md)+'</div>';
   h+=table(md);
   return h;
@@ -464,6 +465,34 @@ function usageSplit(md){
     row('none','No usage at all','var(--bad)',b.none)+'</div>'+
     (names.length?'<div class="note"><b>'+esc(lbl)+' in '+esc(currentMonth)+' ('+names.length+'):</b> '+
       esc(names.join(', '))+'.</div>':'');
+}
+
+function modelPanel(){
+  const M=DATA.modelSpend, names=['Fable','Opus','Sonnet','Haiku'];
+  const col={Fable:'var(--chat)',Opus:'var(--spend)',Sonnet:'var(--code)',Haiku:'var(--cowork)'};
+  const rows=M.windows.map(w=>{
+    const tot=names.reduce((a,n)=>a+(w.by[n]||0),0)||1;
+    const segs=names.filter(n=>w.by[n]>0).map(n=>
+      '<div style="width:'+(w.by[n]/tot*100)+'%;background:'+col[n]+
+      ';height:100%" title="'+esc(n)+': $'+w.by[n]+'"></div>').join('');
+    const share=names.filter(n=>w.by[n]>0)
+      .map(n=>esc(n)+' '+Math.round(w.by[n]/tot*100)+'%').join(' · ');
+    return '<div style="margin-bottom:13px"><div style="display:flex;justify-content:space-between;'+
+      'font-size:.82rem;margin-bottom:5px"><span><b>'+esc(w.label)+'</b> '+
+      '<span style="color:var(--faint)">'+esc(w.sub)+(w.derived?' · derived':'')+
+      (w.approx?', approximate':'')+'</span></span>'+
+      '<span style="color:var(--muted)">$'+tot+'</span></div>'+
+      '<div style="display:flex;height:15px;border-radius:4px;overflow:hidden;gap:2px;'+
+      'background:var(--track)">'+segs+'</div>'+
+      '<div style="font-size:.74rem;color:var(--faint);margin-top:4px">'+share+'</div></div>';
+  }).join('');
+  const key=names.map(n=>'<span class="key-i"><span class="sq" style="background:'+col[n]+
+    '"></span>'+esc(n)+'</span>').join('');
+  return '<div class="panel"><div class="p-title">Which models the spend ran on'+
+    '<span class="p-note">US dollars · '+esc(M.source.split(', ')[1])+'</span></div>'+
+    '<div class="key" style="margin-bottom:12px">'+key+'</div>'+rows+
+    '<div class="note warnbox"><b>This is spend, not messages.</b> '+esc(M.caveat)+'</div>'+
+    '<div class="note">'+esc(M.derivedNote)+'</div></div>';
 }
 
 function board(title,sub,key,unit,col,act){
