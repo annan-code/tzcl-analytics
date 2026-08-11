@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>TransitionZero · Claude Analytics</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f6f8;--surface:#ffffff;--surface2:#f7f8fa;--border:#e4e7ec;--border2:#d0d5dd;
+  --text:#101828;--muted:#667085;--subtle:#98a2b3;
+  --chat:#2563eb;--cowork:#7c3aed;--code:#0d9488;--spend:#b45309;
+  --ok:#12b76a;--warn:#f79009;--bad:#f04438;
+  --accent:#eab308;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+body.dark{
+  --bg:#0f172a;--surface:#1e293b;--surface2:#273449;--border:#334155;--border2:#475569;
+  --text:#f1f5f9;--muted:#94a3b8;--subtle:#64748b;
+  --chat:#60a5fa;--cowork:#c084fc;--code:#2dd4bf;--spend:#fbbf24;
+  --ok:#34d399;--warn:#fbbf24;--bad:#f87171;
+}
+body{background:var(--bg);color:var(--text);min-height:100vh;padding:22px;
+     transition:background .2s,color .2s;-webkit-font-smoothing:antialiased}
+.page{max-width:1240px;margin:0 auto}
+
+/* ── password gate ───────────────────────────────────────── */
+.gate{max-width:400px;margin:14vh auto;background:var(--surface);border:1px solid var(--border);
+      border-radius:14px;padding:32px}
+.gate h2{font-size:1.15rem;margin-bottom:6px}
+.gate p{font-size:.85rem;color:var(--muted);line-height:1.55;margin-bottom:20px}
+.gate input{width:100%;padding:11px 13px;border:1px solid var(--border2);border-radius:9px;
+            background:var(--surface2);color:var(--text);font-size:.95rem;outline:none}
+.gate input:focus{border-color:var(--chat)}
+.gate button{width:100%;margin-top:11px;padding:11px;border:none;border-radius:9px;
+             background:var(--text);color:var(--surface);font-size:.92rem;font-weight:600;cursor:pointer}
+.gate button:disabled{opacity:.55;cursor:default}
+.gate .err{color:var(--bad);font-size:.83rem;margin-top:11px;min-height:1.1em}
+.gate .lock{font-size:1.5rem;margin-bottom:10px}
+
+/* ── header ──────────────────────────────────────────────── */
+.header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+        flex-wrap:wrap;margin-bottom:6px}
+.header-left{display:flex;align-items:center;gap:12px}
+.logo{width:34px;height:34px;background:linear-gradient(135deg,#2563eb,#7c3aed);border-radius:9px;
+      display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;color:#fff}
+h1{font-size:1.35rem;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+.sub{font-size:.78rem;color:var(--muted);margin-top:2px}
+.mode-btn{padding:7px 13px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);
+          color:var(--muted);font-size:.78rem;cursor:pointer;white-space:nowrap}
+.mode-btn:hover{color:var(--text);border-color:var(--muted)}
+
+/* period banner — makes the window unambiguous */
+.period-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+            background:var(--surface);border:1px solid var(--border);border-radius:11px;
+            padding:11px 15px;margin:14px 0 16px}
+.period-main{font-size:.92rem;font-weight:600}
+.period-live{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;
+             color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent);
+             border-radius:20px;padding:2px 9px}
+.period-live .dot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.period-sep{color:var(--border2)}
+.period-meta{font-size:.79rem;color:var(--muted)}
+.period-meta strong{color:var(--text);font-weight:600}
+
+.bars{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+.tabs{display:flex;gap:3px;background:var(--surface);border:1px solid var(--border);
+      border-radius:10px;padding:3px;flex-wrap:wrap}
+.tab{padding:6px 13px;border-radius:7px;border:none;background:transparent;color:var(--muted);
+     font-size:.81rem;font-weight:500;cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--text);background:var(--surface2)}
+.tab.active{background:var(--text);color:var(--surface)}
+.tab .now{font-size:.62rem;opacity:.75;margin-left:4px}
+
+/* ── cards ───────────────────────────────────────────────── */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px 18px}
+.card-label{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;
+            letter-spacing:.06em;margin-bottom:7px}
+.card-value{font-size:1.55rem;font-weight:700;letter-spacing:-.03em;line-height:1}
+.card-sub{font-size:.73rem;color:var(--muted);margin-top:6px;line-height:1.45}
+.card-value.chat{color:var(--chat)}.card-value.cowork{color:var(--cowork)}
+.card-value.code{color:var(--code)}.card-value.ok{color:var(--ok)}.card-value.spend{color:var(--spend)}
+
+.section{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+         padding:16px 18px;margin-bottom:16px}
+.section-title{font-size:.71rem;font-weight:600;color:var(--muted);text-transform:uppercase;
+               letter-spacing:.06em;margin-bottom:13px}
+.section-note{font-size:.7rem;color:var(--subtle);font-weight:400;text-transform:none;
+              letter-spacing:0;margin-left:6px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+@media(max-width:900px){.grid3,.grid2{grid-template-columns:1fr}}
+
+.legend{display:flex;gap:15px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:.77rem;color:var(--muted);
+             cursor:pointer;user-select:none}
+.legend-item.off{opacity:.35}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.chart-wrap{overflow-x:auto}
+
+/* ── leaderboards ────────────────────────────────────────── */
+.lb-head{display:flex;align-items:center;gap:7px;margin-bottom:12px}
+.lb-head .dot{width:8px;height:8px}
+.lb-title{font-size:.71rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.lb-list{display:grid;gap:5px}
+.lb-item{display:flex;align-items:center;gap:10px;padding:7px 9px;background:var(--surface2);
+         border-radius:8px}
+.lb-rank{font-size:.68rem;color:var(--subtle);width:14px;text-align:center;font-weight:600;flex-shrink:0}
+.lb-name{flex:1;font-size:.82rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-meta{font-size:.68rem;color:var(--muted);font-weight:400}
+.lb-val{font-size:.83rem;font-weight:700;flex-shrink:0;font-variant-numeric:tabular-nums}
+.lb-unit{font-size:.66rem;font-weight:400;color:var(--muted);margin-left:3px}
+.lb-empty{font-size:.78rem;color:var(--subtle);padding:9px}
+
+/* ── department bars ─────────────────────────────────────── */
+.dept-grid{display:grid;gap:9px}
+.dept-row{display:flex;align-items:center;gap:10px;border-radius:7px;padding:3px 4px}
+.dept-row.click{cursor:pointer}
+.dept-row.click:hover{background:var(--surface2)}
+.dept-row.on{background:var(--surface2);outline:1px solid var(--border2)}
+.dept-name{font-size:.81rem;width:158px;flex-shrink:0}
+.dept-bar-wrap{flex:1;height:7px;background:var(--surface2);border-radius:4px;overflow:hidden;min-width:50px}
+body.dark .dept-bar-wrap{background:#0f172a}
+.dept-bar{height:100%;border-radius:4px;transition:width .35s ease}
+.dept-count{font-size:.77rem;color:var(--muted);width:94px;text-align:right;flex-shrink:0;
+            font-variant-numeric:tabular-nums}
+
+/* ── table ───────────────────────────────────────────────── */
+.controls{display:flex;align-items:center;gap:9px;margin-bottom:14px;flex-wrap:wrap}
+.controls-label{font-size:.71rem;font-weight:600;color:var(--muted);text-transform:uppercase;
+                letter-spacing:.06em;margin-right:2px}
+input.search,select.sel{background:var(--surface);border:1px solid var(--border2);border-radius:8px;
+       padding:8px 11px;color:var(--text);font-size:.83rem;outline:none;font-family:inherit}
+input.search{width:230px}
+input.search::placeholder{color:var(--subtle)}
+input.search:focus,select.sel:focus{border-color:var(--chat)}
+.csv-btn{padding:8px 15px;border:none;border-radius:8px;background:var(--accent);color:#3f2d00;
+         font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.csv-btn:hover{filter:brightness(.95)}
+.count{font-size:.77rem;color:var(--subtle);margin-left:auto;font-variant-numeric:tabular-nums}
+.rag-key{display:flex;gap:12px;flex-wrap:wrap}
+.rag-key-item{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--muted)}
+.sq{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.sq-ok{background:var(--ok)}.sq-warn{background:var(--warn)}.sq-bad{background:var(--bad)}
+
+.tbl-scroll{overflow-x:auto}
+/* height is locked in JS to the unfiltered size, so filtering never moves the page */
+table{width:100%;border-collapse:collapse;font-size:.83rem}
+th{text-align:left;padding:9px 10px;color:var(--muted);font-size:.68rem;font-weight:600;
+   text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid var(--text);
+   white-space:nowrap;user-select:none}
+th.click{cursor:pointer}
+th.click:hover{color:var(--text)}
+th.sorted{color:var(--text)}
+td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr:hover td{background:var(--surface2)}
+tbody tr.none td{opacity:.62}
+.name-cell{display:flex;align-items:center;gap:9px}
+.name-text{font-weight:600;line-height:1.25}
+.title-text{font-size:.72rem;color:var(--muted);margin-top:1px;line-height:1.3}
+.chip{display:inline-block;padding:2px 9px;border-radius:5px;font-size:.65rem;font-weight:700;
+      text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;
+      border:1.5px solid currentColor;background:transparent}
+.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.num.chat{color:var(--chat)}.num.cowork{color:var(--cowork)}
+.num.code{color:var(--code)}.num.spend{color:var(--spend)}
+.num.zero{color:var(--subtle);font-weight:400}
+.days{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.no-data{text-align:center;padding:34px;color:var(--subtle);font-size:.88rem}
+
+.note{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--warn);
+      border-radius:8px;padding:11px 13px;font-size:.79rem;color:var(--muted);line-height:1.55}
+.note strong{color:var(--text);font-weight:600}
+.tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:.65rem;font-weight:700;
+     background:var(--surface2);color:var(--cowork);border:1px solid var(--border)}
+.window-pill{display:inline-block;background:var(--surface);border:1px solid var(--border);
+             border-radius:20px;padding:4px 13px;font-size:.75rem;color:var(--muted);margin-bottom:15px}
+.stack{display:flex;height:24px;border-radius:6px;overflow:hidden;gap:2px}
+.stack-seg{transition:opacity .15s}
+.stack-seg:hover{opacity:.78}
+.cat-legend{display:flex;flex-wrap:wrap;gap:11px;margin-top:11px}
+.cat-legend-item{display:flex;align-items:center;gap:6px;font-size:.74rem;color:var(--muted)}
+.footer{font-size:.74rem;color:var(--subtle);text-align:center;margin-top:20px;padding-top:14px;
+        border-top:1px solid var(--border);line-height:1.65}
+.spinner{width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--chat);
+         border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{text-align:center;padding:70px 20px;color:var(--muted)}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- password gate -->
+<div id="gate" class="gate">
+  <div class="lock">🔒</div>
+  <h2>TransitionZero · Claude Analytics</h2>
+  <p>This dashboard contains named staff usage data. Enter the password to decrypt it.
+     Decryption happens in your browser; the password is never sent anywhere.</p>
+  <input id="pw" type="password" placeholder="Password" autocomplete="current-password">
+  <button id="go">Unlock</button>
+  <div class="err" id="err"></div>
+</div>
+
+<!-- app -->
+<div class="page hide" id="page">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">TZ</div>
+      <div>
+        <h1>Claude Analytics</h1>
+        <div class="sub" id="orgSub"></div>
+      </div>
+    </div>
+    <button class="mode-btn" onclick="toggleMode()" id="modeBtn">🌙 Dark mode</button>
+  </div>
+
+  <div class="period-bar" id="periodBar"></div>
+
+  <div class="bars">
+    <div class="tabs" id="viewTabs">
+      <button class="tab active" onclick="setView('monthly')" id="v-monthly">Adoption</button>
+      <button class="tab" onclick="setView('usage')" id="v-usage">Usage detail</button>
+      <button class="tab" onclick="setView('cost')" id="v-cost">Cost</button>
+    </div>
+    <div class="tabs" id="monthTabs"></div>
+  </div>
+
+  <div id="app"></div>
+  <div class="footer" id="footer"></div>
+</div>
+
+<script>
+/* ═══ decryption gate ═══════════════════════════════════════ */
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+async function unlock(password) {
+  const res = await fetch('data.enc?v=' + Date.now());
+  if (!res.ok) throw new Error('Could not load data file (HTTP ' + res.status + ')');
+  const p = await res.json();
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(password),
+    'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: b64(p.salt), iterations: p.iterations, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(p.iv) }, key, b64(p.ct));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
+const gate = document.getElementById('gate');
+const pwEl = document.getElementById('pw');
+const goEl = document.getElementById('go');
+const errEl = document.getElementById('err');
+
+async function attempt() {
+  const pw = pwEl.value;
+  if (!pw) return;
+  goEl.disabled = true; goEl.textContent = 'Decrypting…'; errEl.textContent = '';
+  try {
+    DATA = await unlock(pw);
+    gate.classList.add('hide');
+    document.getElementById('page').classList.remove('hide');
+    boot();
+  } catch (e) {
+    errEl.textContent = /operation-specific reason|OperationError|decrypt/i.test(e.message || String(e))
+      ? 'Wrong password.' : ('Could not open: ' + e.message);
+    goEl.disabled = false; goEl.textContent = 'Unlock';
+    pwEl.select();
+  }
+}
+goEl.addEventListener('click', attempt);
+pwEl.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
+pwEl.focus();
+
+/* ═══ state ════════════════════════════════════════════════ */
+let DATA = null, MONTHS = [], currentMonth = null, view = 'monthly';
+let deptFilter = 'all', sortKey = 'name', searchTerm = '', hiddenSeries = {};
+
+const DEPT_COLOURS = {
+  'Technology': '#2563eb', 'Operations': '#0d9488', 'Solutions Engineering': '#ea580c',
+  'Product': '#7c3aed', 'Engagement & Insights': '#db2777', 'Office of CEO': '#64748b'
+};
+const CAT = ['#2563eb', '#0d9488', '#ea580c', '#7c3aed', '#db2777', '#64748b', '#94a3b8'];
+
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
+  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = n => (n == null ? '—' : Number(n).toLocaleString('en-GB'));
+const money = n => '$' + Number(n).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money0 = n => '$' + Math.round(Number(n)).toLocaleString('en-GB');
+const pct = n => Math.round(n * 100) + '%';
+const nameOf = e => (e || '').split('@')[0].replace(/\./g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+/* usage status per member, relative to how long the month has run */
+function statusOf(m, days) {
+  if (!m.daysActive) return { k: 'none', label: 'No usage', c: 'var(--bad)' };
+  if (m.daysActive / days >= 0.4) return { k: 'active', label: 'Active', c: 'var(--ok)' };
+  return { k: 'min', label: 'Minimal', c: 'var(--warn)' };
+}
+
+function boot() {
+  MONTHS = Object.keys(DATA.months);
+  currentMonth = MONTHS[MONTHS.length - 1];
+  document.getElementById('orgSub').textContent =
+    DATA.meta.org + ' · ' + DATA.meta.seats + ' seats' +
+    (DATA.meta.accounts && DATA.meta.accounts !== DATA.meta.seats
+      ? ' · ' + DATA.meta.accounts + ' accounts' : '');
+  renderMonthTabs();
+  render();
+}
+
+function renderMonthTabs() {
+  document.getElementById('monthTabs').innerHTML = MONTHS.map((m, i) => {
+    const isNow = i === MONTHS.length - 1;
+    return '<button class="tab' + (m === currentMonth ? ' active' : '') +
+      '" onclick="setMonth(\'' + m + '\')">' + esc(m) +
+      (isNow ? '<span class="now">now</span>' : '') + '</button>';
+  }).join('');
+}
+function setMonth(m) { currentMonth = m; deptFilter = 'all'; searchTerm = ''; renderMonthTabs(); render(); }
+function setView(v) {
+  view = v;
+  ['monthly', 'usage', 'cost'].forEach(k =>
+    document.getElementById('v-' + k).classList.toggle('active', k === v));
+  document.getElementById('monthTabs').classList.toggle('hide', v !== 'monthly');
+  render();
+}
+function toggleMode() {
+  document.body.classList.toggle('dark');
+  document.getElementById('modeBtn').textContent =
+    document.body.classList.contains('dark') ? '☀ Light mode' : '🌙 Dark mode';
+  render();
+}
+
+/* ═══ period banner — no ambiguity about dates ══════════════ */
+function periodBar() {
+  const s = DATA.snapshot;
+  if (view === 'monthly') {
+    const md = DATA.months[currentMonth];
+    const isNow = currentMonth === MONTHS[MONTHS.length - 1];
+    const partial = /partial|progress/i.test(md.period) || isNow;
+    return '<span class="period-main">' + esc(monthLong(currentMonth)) + '</span>' +
+      '<span class="period-sep">·</span>' +
+      '<span class="period-meta">' + esc(md.period.replace(/\s*\(partial\)\s*/i, '')) +
+      ' · ' + md.days + ' day' + (md.days === 1 ? '' : 's') + ' counted</span>' +
+      (partial ? '<span class="period-live"><span class="dot"></span>Month in progress</span>' : '') +
+      '<span class="period-sep">·</span>' +
+      '<span class="period-meta">Data accurate to <strong>' + esc(niceDate(s.dataAsOf)) + '</strong></span>';
+  }
+  return '<span class="period-main">' + (view === 'cost' ? 'Cost' : 'Usage detail') + '</span>' +
+    '<span class="period-sep">·</span>' +
+    '<span class="period-meta">' + esc(view === 'cost' ? '1 – 10 August 2026, month to date' : s.window) + '</span>' +
+    '<span class="period-sep">·</span>' +
+    '<span class="period-meta">Data accurate to <strong>' + esc(niceDate(s.dataAsOf)) + '</strong></span>';
+}
+function monthLong(k) {
+  const M = { Jan: 'January', Feb: 'February', Mar: 'March', Apr: 'April', May: 'May', Jun: 'June',
+    Jul: 'July', Aug: 'August', Sep: 'September', Oct: 'October', Nov: 'November', Dec: 'December' };
+  const p = k.split(' ');
+  return (M[p[0]] || p[0]) + ' ' + p[1];
+}
+function niceDate(iso) {
+  if (!iso) return 'unknown';
+  const [y, m, d] = iso.split('-').map(Number);
+  const M = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return d + ' ' + M[m - 1] + ' ' + y;
+}
+
+function render() {
+  if (!DATA) return;
+  document.getElementById('periodBar').innerHTML = periodBar();
+  const app = document.getElementById('app');
+  app.innerHTML = view === 'monthly' ? renderMonthly()
+    : view === 'usage' ? renderUsage() : renderCost();
+  if (view === 'monthly') paintRows();
+  document.getElementById('footer').innerHTML =
+    'Monthly figures: ' + esc(DATA.meta.monthlySource) + '.<br>' +
+    'Usage detail and cost: ' + esc(DATA.snapshot.source) +
+    ', fetched ' + esc(niceDate(DATA.snapshot.fetchedAt.slice(0, 10))) + '.';
+}
+
+/* ═══ VIEW 1 · ADOPTION ════════════════════════════════════ */
+function renderMonthly() {
+  const md = DATA.months[currentMonth];
+  if (!md) return '<div class="no-data">No data for this month.</div>';
+  const all = md.members, act = all.filter(m => m.daysActive > 0);
+  const sum = k => act.reduce((a, b) => a + (b[k] || 0), 0);
+
+  let h = '<div class="section" style="padding:18px">' + trendChart() + '</div>';
+
+  h += '<div class="cards">' +
+    card('Active users', act.length + ' <span style="font-size:.95rem;color:var(--muted)">/ ' +
+      DATA.meta.seats + '</span>',
+      Math.round(act.length / DATA.meta.seats * 100) + '% of seats used this month', 'ok') +
+    card('Chat messages', fmt(sum('messages')),
+      'Sent in Claude Chat · ' + Math.round(sum('messages') / (act.length || 1)) + ' avg per active user', 'chat') +
+    card('Cowork messages', fmt(sum('coworkMessages')),
+      'Claude working on files and tasks · ' + act.filter(m => m.coworkMessages > 0).length + ' users', 'cowork') +
+    card('Code sessions', fmt(sum('codeSessions')),
+      'Claude Code terminal sessions · ' + act.filter(m => m.codeSessions > 0).length + ' users', 'code') +
+    card('Est. spend', money0(sum('spend')), 'Chat and Cowork usage charges', 'spend') +
+    '</div>';
+
+  /* top users across all three products, side by side */
+  h += '<div class="grid3">' +
+    board('Top in Chat', 'messages', 'msgs', 'var(--chat)', act) +
+    board('Top in Cowork', 'coworkMessages', 'msgs', 'var(--cowork)', act) +
+    board('Top in Claude Code', 'codeSessions', 'sessions', 'var(--code)', act) +
+    '</div>';
+
+  h += '<div class="grid2">' + deptSection(md) + statusSection(md) + '</div>';
+  h += memberTable(md);
+  return h;
+}
+
+function card(label, value, sub, cls) {
+  return '<div class="card"><div class="card-label">' + esc(label) + '</div>' +
+    '<div class="card-value ' + (cls || '') + '">' + value + '</div>' +
+    (sub ? '<div class="card-sub">' + esc(sub) + '</div>' : '') + '</div>';
+}
+
+function board(title, key, unit, colour, act) {
+  const top = act.filter(m => m[key] > 0).sort((a, b) => b[key] - a[key]).slice(0, 5);
+  const rows = top.length ? top.map((m, i) =>
+    '<div class="lb-item"><div class="lb-rank">' + (i + 1) + '</div>' +
+    '<div class="lb-name">' + esc(m.name) +
+    '<div class="lb-meta">' + esc(m.dept) + '</div></div>' +
+    '<div class="lb-val" style="color:' + colour + '">' + fmt(m[key]) +
+    '<span class="lb-unit">' + esc(unit) + '</span></div></div>').join('')
+    : '<div class="lb-empty">Nobody used this in ' + esc(currentMonth.split(' ')[0]) + '.</div>';
+  return '<div class="section" style="margin:0">' +
+    '<div class="lb-head"><span class="dot" style="background:' + colour + '"></span>' +
+    '<span class="lb-title">' + esc(title) + '</span></div>' +
+    '<div class="lb-list">' + rows + '</div></div>';
+}
+
+function trendChart() {
+  const series = [
+    { key: 'messages', label: 'Chat messages', raw: '#2563eb' },
+    { key: 'coworkMessages', label: 'Cowork messages', raw: '#7c3aed' },
+    { key: 'codeSessions', label: 'Code sessions', raw: '#0d9488' }
+  ];
+  const pts = MONTHS.map(m => {
+    const mem = DATA.months[m].members, o = { month: m.split(' ')[0] };
+    series.forEach(s => o[s.key] = mem.reduce((a, b) => a + (b[s.key] || 0), 0));
+    return o;
+  });
+  const vis = series.filter(s => !hiddenSeries[s.key]);
+  const max = Math.max(1, ...pts.flatMap(p => vis.map(s => p[s.key])));
+  const W = 1000, H = 250, PL = 58, PR = 66, PT = 16, PB = 32;
+  const iw = W - PL - PR, ih = H - PT - PB;
+  const x = i => PL + (pts.length === 1 ? iw / 2 : i * iw / (pts.length - 1));
+  const y = v => PT + ih - (v / max) * ih;
+
+  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:250px" role="img" aria-label="Usage trend by month">';
+  for (let i = 0; i <= 4; i++) {
+    const gy = PT + ih - (i / 4) * ih;
+    svg += '<line x1="' + PL + '" y1="' + gy + '" x2="' + (W - PR) + '" y2="' + gy +
+      '" stroke="var(--border)" stroke-width="1"/>' +
+      '<text x="' + (PL - 9) + '" y="' + (gy + 4) + '" fill="var(--subtle)" font-size="11" text-anchor="end">' +
+      Math.round(max * i / 4).toLocaleString('en-GB') + '</text>';
+  }
+  pts.forEach((p, i) => {
+    const last = i === pts.length - 1;
+    svg += '<text x="' + x(i) + '" y="' + (H - 11) + '" fill="' + (last ? 'var(--text)' : 'var(--subtle)') +
+      '" font-size="11" text-anchor="middle"' + (last ? ' font-weight="700"' : '') + '>' + esc(p.month) + '</text>';
+  });
+  vis.forEach(s => {
+    svg += '<path d="' + pts.map((p, i) => (i ? 'L' : 'M') + x(i) + ' ' + y(p[s.key])).join(' ') +
+      '" fill="none" stroke="' + s.raw + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+    pts.forEach((p, i) => {
+      svg += '<circle cx="' + x(i) + '" cy="' + y(p[s.key]) + '" r="3.5" fill="' + s.raw +
+        '" stroke="var(--surface)" stroke-width="2"><title>' + esc(p.month) + ' · ' + esc(s.label) +
+        ': ' + fmt(p[s.key]) + '</title></circle>';
+    });
+  });
+  const last = pts[pts.length - 1];
+  const labels = vis.map(s => ({ raw: s.raw, v: last[s.key], y: y(last[s.key]) })).sort((a, b) => a.y - b.y);
+  for (let i = 1; i < labels.length; i++)
+    if (labels[i].y - labels[i - 1].y < 13) labels[i].y = labels[i - 1].y + 13;
+  labels.forEach(l => {
+    svg += '<text x="' + (x(pts.length - 1) + 9) + '" y="' + (l.y + 4) + '" fill="' + l.raw +
+      '" font-size="11" font-weight="700">' + fmt(l.v) + '</text>';
+  });
+  svg += '</svg>';
+
+  const legend = series.map(s => '<div class="legend-item' + (hiddenSeries[s.key] ? ' off' : '') +
+    '" onclick="toggleSeries(\'' + s.key + '\')"><span class="dot" style="background:' + s.raw +
+    '"></span>' + esc(s.label) + '</div>').join('');
+
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;' +
+    'flex-wrap:wrap;margin-bottom:12px"><div class="section-title" style="margin:0">Usage trend' +
+    '<span class="section-note">click a series to hide it</span></div>' +
+    '<div class="legend">' + legend + '</div></div><div class="chart-wrap">' + svg + '</div>';
+}
+function toggleSeries(k) { hiddenSeries[k] = !hiddenSeries[k]; render(); }
+
+function deptSection(md) {
+  const totals = DATA.meta.deptTotals || {};
+  const by = {};
+  Object.keys(totals).forEach(d => by[d] = { total: totals[d], active: 0 });
+  md.members.forEach(m => {
+    by[m.dept] = by[m.dept] || { total: 0, active: 0 };
+    if (m.daysActive > 0) by[m.dept].active++;
+  });
+  const rows = Object.entries(by).sort((a, b) => b[1].total - a[1].total).map(([d, v]) => {
+    const p = v.total ? v.active / v.total : 0;
+    return '<div class="dept-row click' + (deptFilter === d ? ' on' : '') +
+      '" onclick="setDept(' + JSON.stringify(d).replace(/"/g, '&quot;') + ')">' +
+      '<div class="dept-name">' + esc(d) + '</div>' +
+      '<div class="dept-bar-wrap"><div class="dept-bar" style="width:' + (p * 100) +
+      '%;background:' + (DEPT_COLOURS[d] || '#94a3b8') + '"></div></div>' +
+      '<div class="dept-count">' + v.active + ' of ' + v.total + ' · ' + Math.round(p * 100) + '%</div></div>';
+  }).join('');
+  return '<div class="section" style="margin:0"><div class="section-title">Adoption by department' +
+    '<span class="section-note">click to filter the table</span></div>' +
+    '<div class="dept-grid">' + rows + '</div></div>';
+}
+function setDept(d) {
+  deptFilter = (deptFilter === d ? 'all' : d);
+  render();
+}
+
+function statusSection(md) {
+  const days = md.days, buckets = { active: [], min: [], none: [] };
+  md.members.forEach(m => buckets[statusOf(m, days).k].push(m));
+  const total = md.members.length;
+  const row = (k, label, colour, list) => {
+    const p = total ? list.length / total : 0;
+    return '<div class="dept-row"><div class="dept-name">' + label + '</div>' +
+      '<div class="dept-bar-wrap"><div class="dept-bar" style="width:' + (p * 100) +
+      '%;background:' + colour + '"></div></div>' +
+      '<div class="dept-count">' + list.length + ' of ' + total + '</div></div>';
+  };
+  const dropped = buckets.none.map(m => m.name).sort();
+  return '<div class="section" style="margin:0"><div class="section-title">Who is actually using it' +
+    '<span class="section-note">active means used on 40% or more of the days so far</span></div>' +
+    '<div class="dept-grid">' +
+    row('active', 'Active', 'var(--ok)', buckets.active) +
+    row('min', 'Minimal', 'var(--warn)', buckets.min) +
+    row('none', 'No usage', 'var(--bad)', buckets.none) +
+    '</div>' +
+    (dropped.length ? '<div class="note" style="margin-top:13px"><strong>No usage this month:</strong> ' +
+      esc(dropped.join(', ')) + '.</div>' : '') +
+    '</div>';
+}
+
+/* ── member table ───────────────────────────────────────────
+   The shell is rendered once. Typing in the search box only
+   repaints the rows, so the page never jumps or loses focus.  */
+function memberTable(md) {
+  const depts = Object.keys(DATA.meta.deptTotals || {}).sort();
+  const sorts = [['name', 'Name (A–Z)'], ['daysActive', 'Days active'], ['messages', 'Chat messages'],
+    ['coworkMessages', 'Cowork messages'], ['codeSessions', 'Code sessions'], ['spend', 'Spend']];
+  return '<div class="section">' +
+    '<div class="controls">' +
+    '<span class="controls-label">All members</span>' +
+    '<input class="search" id="q" placeholder="Search name, role or department" ' +
+    'value="' + esc(searchTerm) + '" autocomplete="off" oninput="onSearch(this.value)">' +
+    '<select class="sel" onchange="setDept(this.value)">' +
+    '<option value="all"' + (deptFilter === 'all' ? ' selected' : '') + '>All departments</option>' +
+    depts.map(d => '<option value="' + esc(d) + '"' + (deptFilter === d ? ' selected' : '') + '>' +
+      esc(d) + '</option>').join('') + '</select>' +
+    '<select class="sel" onchange="setSort(this.value)">' +
+    sorts.map(([k, l]) => '<option value="' + k + '"' + (sortKey === k ? ' selected' : '') + '>' +
+      (k === 'name' ? l : 'Most ' + l.toLowerCase()) + '</option>').join('') + '</select>' +
+    '<div class="rag-key">' +
+    '<span class="rag-key-item"><span class="sq sq-ok"></span>Active</span>' +
+    '<span class="rag-key-item"><span class="sq sq-warn"></span>Minimal</span>' +
+    '<span class="rag-key-item"><span class="sq sq-bad"></span>No usage</span></div>' +
+    '<button class="csv-btn" onclick="downloadCSV()">Download CSV</button>' +
+    '<span class="count" id="cnt"></span>' +
+    '</div>' +
+    '<div class="tbl-scroll" id="tblBox"><table><thead><tr>' +
+    '<th>Name / title</th><th>Department</th><th class="num">Days</th>' +
+    '<th class="num">Chat msgs</th><th class="num">Cowork msgs</th>' +
+    '<th class="num">Code sessions</th><th class="num">Spend</th>' +
+    '</tr></thead><tbody id="tb"></tbody></table></div></div>';
+}
+
+function visibleRows() {
+  const md = DATA.months[currentMonth];
+  let rows = md.members.slice();
+  if (deptFilter !== 'all') rows = rows.filter(m => m.dept === deptFilter);
+  const t = searchTerm.trim().toLowerCase();
+  if (t) rows = rows.filter(m =>
+    m.name.toLowerCase().includes(t) ||
+    (m.title || '').toLowerCase().includes(t) ||
+    (m.dept || '').toLowerCase().includes(t));
+  rows.sort((a, b) => sortKey === 'name'
+    ? a.name.localeCompare(b.name)
+    : (b[sortKey] || 0) - (a[sortKey] || 0));
+  return { rows, md };
+}
+
+function paintRows() {
+  const tb = document.getElementById('tb');
+  if (!tb) return;
+  const { rows, md } = visibleRows();
+  const days = md.days;
+  tb.innerHTML = rows.length ? rows.map(m => {
+    const st = statusOf(m, days);
+    const col = DEPT_COLOURS[m.dept] || '#94a3b8';
+    const n = (v, cls) => '<td class="num ' + (v ? cls : 'zero') + '">' + (v ? fmt(v) : '—') + '</td>';
+    return '<tr class="' + (st.k === 'none' ? 'none' : '') + '">' +
+      '<td><div class="name-cell"><span class="dot" style="background:' + st.c +
+      '" title="' + st.label + '"></span><div><div class="name-text">' + esc(m.name) + '</div>' +
+      '<div class="title-text">' + esc(m.title) + '</div></div></div></td>' +
+      '<td><span class="chip" style="color:' + col + '">' + esc(m.dept) + '</span></td>' +
+      '<td class="days">' + m.daysActive + ' / ' + days + '</td>' +
+      n(m.messages, 'chat') + n(m.coworkMessages, 'cowork') + n(m.codeSessions, 'code') +
+      '<td class="num ' + (m.spend ? 'spend' : 'zero') + '">' + (m.spend ? money(m.spend) : '—') + '</td>' +
+      '</tr>';
+  }).join('') : '<tr><td colspan="7" class="no-data">Nobody matches that.</td></tr>';
+  const c = document.getElementById('cnt');
+  if (c) c.textContent = rows.length + ' of ' + md.members.length + ' members';
+
+  /* Lock the table box to its full-list height. Without this the document
+     shrinks as you filter, the browser clamps the scroll position, and the
+     page appears to jump upward while you are still typing. */
+  const box = document.getElementById('tblBox');
+  if (box && deptFilter === 'all' && !searchTerm.trim()) {
+    box.style.minHeight = '0px';
+    box.style.minHeight = box.offsetHeight + 'px';
+  }
+}
+
+/* only repaints rows — no full re-render, so no scroll jump */
+function onSearch(v) { searchTerm = v; paintRows(); }
+function setSort(k) { sortKey = k; paintRows(); }
+
+function downloadCSV() {
+  const { rows, md } = visibleRows();
+  if (!rows.length) return;
+  const out = rows.map(m => ({
+    Name: m.name, Title: m.title, Department: m.dept,
+    Status: statusOf(m, md.days).label,
+    'Days active': m.daysActive, 'Days in period': md.days,
+    'Chat messages': m.messages, 'Cowork messages': m.coworkMessages,
+    'Code sessions': m.codeSessions, 'Spend USD': (m.spend || 0).toFixed(2)
+  }));
+  const heads = Object.keys(out[0]);
+  const csv = [heads.join(',')].concat(out.map(r => heads.map(h => {
+    const v = String(r[h]);
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }).join(','))).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = 'TZ_Claude_' + currentMonth.replace(' ', '_') + '.csv';
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* ═══ VIEW 2 · USAGE DETAIL ════════════════════════════════ */
+function renderUsage() {
+  const s = DATA.snapshot;
+  let h = '<div class="cards">' +
+    card('Conversations', fmt(s.outputs.conversations), 'Chat and Cowork threads started', 'chat') +
+    card('File operations', fmt(s.outputs.fileOperations), 'Files created or edited by Claude', 'cowork') +
+    card('Pull requests', fmt(s.outputs.prsCreated), 'Raised with Claude Code', 'code') +
+    card('MCP writes', fmt(s.outputs.mcpWrites), 'Actions written back to connected tools', 'ok') +
+    card('Est. time saved', '~' + fmt(s.timeSaved.hours) + ' hrs', "Anthropic's model, see below", 'spend') +
+    '</div>';
+
+  h += '<div class="section"><div class="section-title">How the time saved figure is built' +
+    '<span class="section-note">Anthropic\'s default assumptions</span></div>' +
+    '<div class="tbl-scroll"><table><thead><tr><th>Verified output</th>' +
+    '<th class="num">Minutes each</th><th class="num">Hours</th></tr></thead><tbody>' +
+    s.timeSaved.assumptions.map(a => {
+      const c = parseInt(String(a.output).replace(/[^0-9]/g, ''), 10) || 0;
+      return '<tr><td>' + esc(a.output) + '</td><td class="num">' + a.minutesEach +
+        '</td><td class="num">' + (c * a.minutesEach / 60).toFixed(1) + '</td></tr>';
+    }).join('') + '</tbody></table></div>' +
+    '<div class="note" style="margin-top:13px">The 150 minutes per pull request assumption does most ' +
+    'of the work here. Treat the headline as an order of magnitude, not a precise figure.</div></div>';
+
+  h += '<div class="grid2">' + depthSection(s) + stickySection(s) + '</div>';
+  h += fileCatSection(s);
+  h += '<div class="grid2">' + skillsSection(s) + connectorsSection(s) + '</div>';
+  h += '<div class="grid2">' + projectsSection(s) + coworkLeaders(s) + '</div>';
+  h += codeSection(s);
+  return h;
+}
+
+function depthSection(s) {
+  const a = s.adoptionLevel, seats = DATA.meta.seats;
+  const rows = [['Have a seat', a.allMembers], ['Used it this month', a.monthly],
+    ['Used it this week', a.weekly], ['Used it yesterday', a.daily]].map(([l, v]) =>
+    '<div class="dept-row"><div class="dept-name">' + l + '</div>' +
+    '<div class="dept-bar-wrap"><div class="dept-bar" style="width:' + (v / seats * 100) +
+    '%;background:' + CAT[0] + '"></div></div>' +
+    '<div class="dept-count">' + v + ' · ' + Math.round(v / seats * 100) + '%</div></div>').join('');
+  return '<div class="section" style="margin:0"><div class="section-title">Depth of adoption' +
+    '<span class="section-note">of ' + seats + ' seats</span></div><div class="dept-grid">' + rows + '</div>' +
+    '<div class="note" style="margin-top:13px">Breadth is strong, depth is thin. Nearly everyone has ' +
+    'used Claude this month, but only <strong>' + a.daily + '</strong> used it yesterday. ' +
+    'Daily use is the number to move.</div></div>';
+}
+
+function stickySection(s) {
+  const rows = s.stickiness.map((p, i) =>
+    '<div class="dept-row"><div class="dept-name">' + esc(p.product) + '</div>' +
+    '<div class="dept-bar-wrap"><div class="dept-bar" style="width:' +
+    Math.min(100, p.dauMau / 0.25 * 100) + '%;background:' + CAT[i] + '"></div></div>' +
+    '<div class="dept-count">' + pct(p.dauMau) + '</div></div>').join('');
+  return '<div class="section" style="margin:0"><div class="section-title">Product stickiness' +
+    '<span class="section-note">daily actives as a share of monthly actives</span></div>' +
+    '<div class="dept-grid">' + rows + '</div>' +
+    '<div class="note" style="margin-top:13px">Higher means people come back day after day rather ' +
+    'than dipping in. Cowork is stickiest at ' + pct(s.stickiness[0].dauMau) +
+    '. Office Agents is provisioned but unused.</div></div>';
+}
+
+function fileCatSection(s) {
+  const f = s.fileCategories;
+  const segs = f.categories.map((c, i) => '<div class="stack-seg" style="width:' + (c.share * 100) +
+    '%;background:' + CAT[i % CAT.length] + '" title="' + esc(c.category) + ': ' + fmt(c.count) +
+    ' operations"></div>').join('');
+  const legend = f.categories.map((c, i) => '<div class="cat-legend-item">' +
+    '<span class="dot" style="background:' + CAT[i % CAT.length] + '"></span>' +
+    esc(c.category) + ' · ' + fmt(c.count) + ' (' + (c.share * 100).toFixed(1) + '%)</div>').join('');
+  return '<div class="section"><div class="section-title">What Claude is actually working on' +
+    '<span class="section-note">' + fmt(f.total) + ' Cowork file operations, by type</span></div>' +
+    '<div class="stack">' + segs + '</div><div class="cat-legend">' + legend + '</div></div>';
+}
+
+function skillsSection(s) {
+  const tz = s.skills.filter(k => k.builtBy === 'TransitionZero').length;
+  return '<div class="section" style="margin:0"><div class="section-title">Skills in use' +
+    '<span class="section-note">packaged instructions people invoke by name</span></div>' +
+    '<div class="tbl-scroll"><table><thead><tr><th>Skill</th><th class="num">Uses</th>' +
+    '<th class="num">Cost each</th></tr></thead><tbody>' +
+    s.skills.map(k => '<tr><td>' + esc(k.skill) +
+      (k.builtBy === 'TransitionZero' ? ' <span class="tag">TZ built</span>' : '') +
+      '</td><td class="num">' + fmt(k.uses) + '</td><td class="num' + (k.costPerUse ? '' : ' zero') + '">' +
+      (k.costPerUse ? '$' + k.costPerUse.toFixed(2) : '—') + '</td></tr>').join('') +
+    '</tbody></table></div><div class="note" style="margin-top:13px"><strong>' + tz +
+    ' of the top 5 are ours.</strong> Skills we build get used, which is the cheapest lever we have ' +
+    'for raising adoption.</div></div>';
+}
+
+function connectorsSection(s) {
+  const g = s.connectors.find(c => c.connector === 'Granola');
+  return '<div class="section" style="margin:0"><div class="section-title">Connectors' +
+    '<span class="section-note">tools Claude reads from and writes back to</span></div>' +
+    '<div class="tbl-scroll"><table><thead><tr><th>Connector</th><th class="num">Users</th>' +
+    '<th class="num">Reads</th><th class="num">Writes</th></tr></thead><tbody>' +
+    s.connectors.map(c => '<tr><td>' + esc(c.connector) + '</td><td class="num">' + c.users +
+      '</td><td class="num">' + fmt(c.reads) + '</td><td class="num' + (c.writes ? '' : ' zero') + '">' +
+      (c.writes ? fmt(c.writes) : '—') + '</td></tr>').join('') +
+    '</tbody></table></div><div class="note" style="margin-top:13px">Reads far exceed writes everywhere. ' +
+    'Granola has ' + fmt(g ? g.reads : 0) + ' reads and no writes at all, so meeting notes are being ' +
+    'read but nothing goes back. That gap is where automation would pay.</div></div>';
+}
+
+function projectsSection(s) {
+  return '<div class="section" style="margin:0"><div class="section-title">Work streams using Claude' +
+    '<span class="section-note">named Chat projects, by message volume</span></div>' +
+    '<div class="tbl-scroll"><table><thead><tr><th>Project</th><th class="num">Threads</th>' +
+    '<th class="num">Messages</th></tr></thead><tbody>' +
+    s.projects.map(p => '<tr><td>' + esc(p.project) + '</td><td class="num">' + p.conversations +
+      '</td><td class="num">' + fmt(p.messages) + '</td></tr>').join('') +
+    '</tbody></table></div><div class="note" style="margin-top:13px">Every one of these has a single ' +
+    'user. Projects are how repeat work gets faster, and right now nobody is sharing them.</div></div>';
+}
+
+function coworkLeaders(s) {
+  return '<div class="section" style="margin:0"><div class="section-title">Heaviest Cowork users' +
+    '<span class="section-note">Claude working directly on files and tasks</span></div>' +
+    '<div class="lb-list">' + s.topCoworkMembers.map((m, i) =>
+      '<div class="lb-item"><div class="lb-rank">' + (i + 1) + '</div>' +
+      '<div class="lb-name">' + esc(nameOf(m.email)) +
+      '<div class="lb-meta">' + fmt(m.messages) + ' messages</div></div>' +
+      '<div class="lb-val" style="color:var(--cowork)">' + fmt(m.sessions) +
+      '<span class="lb-unit">sessions</span></div></div>').join('') + '</div></div>';
+}
+
+function codeSection(s) {
+  const c = s.claudeCode;
+  return '<div class="section"><div class="section-title">Claude Code</div>' +
+    '<div class="cards" style="margin-bottom:13px">' +
+    card('Suggestion accept rate', (c.suggestionAcceptRate * 100).toFixed(1) + '%',
+      'Share of suggestions engineers kept', 'code') +
+    card('Lines of code accepted', fmt(c.linesOfCodeAccepted), 'Merged into the codebase', 'code') +
+    card('Actions per prompt', s.agentic.actionsPerPrompt, 'Work delegated per instruction', 'chat') +
+    '</div>' + (c.perUserAvailable ? '' :
+      '<div class="note"><strong>Per-engineer detail is not available yet.</strong> ' +
+      esc(c.blockedReason) + '</div>') + '</div>';
+}
+
+/* ═══ VIEW 3 · COST ════════════════════════════════════════ */
+function renderCost() {
+  const sp = DATA.snapshot.spend;
+  let h = '<div class="cards">' +
+    card('Spend so far', money0(sp.mtdActual), 'Month to date', 'spend') +
+    card('Projected month end', money0(sp.projectedEom), 'Last 7 day run rate extended', 'spend') +
+    card('Top decile share', pct(sp.concentration.top10Share),
+      'From ' + Math.ceil(sp.concentration.users / 10) + ' of ' + sp.concentration.users + ' active users', 'chat') +
+    card('Accounts with a cap', sp.limits.withLimit + ' / ' + (sp.limits.withLimit + sp.limits.withoutLimit),
+      'No spend limits are configured', 'ok') +
+    '</div>';
+
+  h += '<div class="note" style="margin-bottom:16px"><strong>Two things to watch.</strong> Spend is ' +
+    'projected to more than treble, from ' + money0(sp.mtdActual) + ' to ' + money0(sp.projectedEom) +
+    ' by month end, and ' + pct(sp.concentration.top10Share) + ' of it comes from the top decile of ' +
+    'users. No spend caps are set on any of the ' + (sp.limits.withLimit + sp.limits.withoutLimit) +
+    ' accounts, so nothing currently limits that.</div>';
+
+  h += '<div class="section"><div class="section-title">Daily spend' +
+    '<span class="section-note">1 – 10 August 2026</span></div>' + dailyChart(sp.dailyActuals) + '</div>';
+  h += '<div class="grid2">' + byProduct(sp) + byModel(sp) + '</div>';
+  h += '<div class="grid2">' + topSpenders(sp) + concentration(sp) + '</div>';
+  return h;
+}
+
+function dailyChart(days) {
+  const W = 1000, H = 195, PL = 54, PR = 18, PT = 16, PB = 30;
+  const iw = W - PL - PR, ih = H - PT - PB;
+  const max = Math.max(1, ...days.map(d => d.value));
+  const bw = iw / days.length * 0.6;
+  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:195px" role="img" aria-label="Daily spend">';
+  for (let i = 0; i <= 4; i++) {
+    const gy = PT + ih - (i / 4) * ih;
+    svg += '<line x1="' + PL + '" y1="' + gy + '" x2="' + (W - PR) + '" y2="' + gy +
+      '" stroke="var(--border)" stroke-width="1"/>' +
+      '<text x="' + (PL - 9) + '" y="' + (gy + 4) + '" fill="var(--subtle)" font-size="11" text-anchor="end">$' +
+      Math.round(max * i / 4) + '</text>';
+  }
+  days.forEach((d, i) => {
+    const cx = PL + (i + 0.5) * iw / days.length, bh = (d.value / max) * ih;
+    svg += '<rect x="' + (cx - bw / 2) + '" y="' + (PT + ih - bh) + '" width="' + bw + '" height="' +
+      Math.max(bh, 1) + '" rx="4" fill="#eab308"><title>' + esc(d.date) + ': $' + d.value + '</title></rect>' +
+      '<text x="' + cx + '" y="' + (H - 9) + '" fill="var(--subtle)" font-size="10" text-anchor="middle">' +
+      esc(d.date.slice(8)) + '</text>';
+    if (d.value > max * 0.4)
+      svg += '<text x="' + cx + '" y="' + (PT + ih - bh - 6) + '" fill="var(--text)" font-size="10" ' +
+        'font-weight="700" text-anchor="middle">$' + d.value + '</text>';
+  });
+  return '<div class="chart-wrap">' + svg + '</svg></div>';
+}
+
+function byProduct(sp) {
+  const max = Math.max(...sp.byProduct.map(p => p.projectedEom));
+  const tot = sp.byProduct.reduce((a, b) => a + b.projectedEom, 0);
+  return '<div class="section" style="margin:0"><div class="section-title">Projected spend by product' +
+    '<span class="section-note">at month end</span></div><div class="dept-grid">' +
+    sp.byProduct.map((p, i) => '<div class="dept-row"><div class="dept-name">' + esc(p.product) + '</div>' +
+      '<div class="dept-bar-wrap"><div class="dept-bar" style="width:' + (p.projectedEom / max * 100) +
+      '%;background:' + CAT[i] + '"></div></div><div class="dept-count">' + money0(p.projectedEom) +
+      '</div></div>').join('') + '</div>' +
+    '<div class="note" style="margin-top:13px">Cowork is ' +
+    Math.round(sp.byProduct[0].projectedEom / tot * 100) + '% of projected spend.</div></div>';
+}
+
+function byModel(sp) {
+  const max = Math.max(...sp.byModel.map(m => m.spend)) || 1;
+  return '<div class="section" style="margin:0"><div class="section-title">Spend by model</div>' +
+    '<div class="dept-grid">' + sp.byModel.map((m, i) =>
+      '<div class="dept-row"><div class="dept-name">' + esc(m.model) + '</div>' +
+      '<div class="dept-bar-wrap"><div class="dept-bar" style="width:' + (m.spend / max * 100) +
+      '%;background:' + CAT[i] + '"></div></div><div class="dept-count">' + money0(m.spend) +
+      '</div></div>').join('') + '</div></div>';
+}
+
+function topSpenders(sp) {
+  return '<div class="section" style="margin:0"><div class="section-title">Highest spend by member' +
+    '<span class="section-note">rolling 30 days</span></div><div class="lb-list">' +
+    sp.topMembers.map((m, i) => '<div class="lb-item"><div class="lb-rank">' + (i + 1) + '</div>' +
+      '<div class="lb-name">' + esc(nameOf(m.email)) + '</div>' +
+      '<div class="lb-val" style="color:var(--spend)">' + money(m.spend) + '</div></div>').join('') +
+    '</div></div>';
+}
+
+function concentration(sp) {
+  return '<div class="section" style="margin:0"><div class="section-title">Spend concentration' +
+    '<span class="section-note">share of total spend by user decile</span></div>' +
+    '<div class="dept-grid">' + sp.concentration.deciles.map((v, i) =>
+      '<div class="dept-row"><div class="dept-name">' +
+      (i === 0 ? 'Top 10%' : (i * 10) + '–' + ((i + 1) * 10) + '%') + '</div>' +
+      '<div class="dept-bar-wrap"><div class="dept-bar" style="width:' + (v * 100) +
+      '%;background:' + (i === 0 ? 'var(--bad)' : CAT[0]) + '"></div></div>' +
+      '<div class="dept-count">' + Math.round(v * 100) + '%</div></div>').join('') + '</div></div>';
+}
+</script>
+</body>
+</html>
