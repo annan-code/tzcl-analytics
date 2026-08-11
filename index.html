@@ -116,8 +116,9 @@ h1{font-size:2.35rem;font-weight:700;letter-spacing:-.03em;line-height:1}
 /* ── bars ──────────────────────────────────────────────── */
 .bars{display:grid;gap:11px}
 .bar{display:flex;align-items:center;gap:14px}
-.bar.click{cursor:pointer;border-radius:4px;padding:2px 4px;margin:-2px -4px}
-.bar.click:hover{background:var(--surface2)}
+.bar.click,.bar-c{cursor:pointer;border-radius:4px;padding:2px 4px;margin:-2px -4px}
+.bar.click:hover,.bar-c:hover{background:var(--surface2)}
+.bar-c .bar-l{width:250px}
 .bar.on{background:var(--surface2);outline:1px solid var(--line)}
 .bar-l{font-size:.82rem;width:172px;flex-shrink:0}
 .bar-t{flex:1;height:7px;background:var(--track);border-radius:100px;overflow:hidden;min-width:50px}
@@ -267,7 +268,7 @@ pwEl.focus();
 
 /* ═══ state ═════════════════════════════════════════════ */
 let DATA=null, MONTHS=[], currentMonth=null, view='monthly';
-let deptFilter='all', sortKey='name', term='', hidden={};
+let deptFilter='all', bandFilter=null, sortKey='name', term='', hidden={};
 
 const DCOL={'Technology':'var(--d-tech)','Operations':'var(--d-ops)',
   'Solutions Engineering':'var(--d-sol)','Product':'var(--d-prod)',
@@ -304,7 +305,7 @@ function paintPills(){
     '<button class="pill'+(m===currentMonth?' on':'')+'" onclick="setMonth(\''+m+'\')">'+esc(m)+
     (i===MONTHS.length-1?'<span class="now">now</span>':'')+'</button>').join('');
 }
-function setMonth(m){ currentMonth=m; deptFilter='all'; term=''; paintPills(); render(); }
+function setMonth(m){ currentMonth=m; deptFilter='all'; bandFilter=null; term=''; paintPills(); render(); }
 function setView(v){
   view=v;
   ['monthly','usage','cost'].forEach(k=>document.getElementById('v-'+k).classList.toggle('on',k===v));
@@ -371,13 +372,13 @@ function vMonthly(){
       'Claude working on files and tasks · '+act.filter(m=>m.coworkMessages>0).length+' users','cowork')+
     card('Code sessions',fmt(sum('codeSessions')),
       'Claude Code terminal sessions · '+act.filter(m=>m.codeSessions>0).length+' users','code')+
-    card('Estimated spend',money0(sum('spend')),'Chat and Cowork usage charges','dark')+
+
     '</div>';
   h+='<div class="panel">'+depts(md)+'</div>';
   h+='<div class="g3">'+
-    board('Heaviest chat users','by messages sent in Claude Chat','messages','msgs','var(--chat)',act)+
-    board('Heaviest Cowork users','Claude working on files and tasks','coworkMessages','msgs','var(--cowork)',act)+
-    board('Heaviest Claude Code users','by terminal coding sessions','codeSessions','sessions','var(--code)',act)+
+    board('Most chat messages','in '+currentMonth+', sent in Claude Chat','messages','msgs','var(--chat)',act)+
+    board('Most Cowork messages','in '+currentMonth+', Claude working on files and tasks','coworkMessages','msgs','var(--cowork)',act)+
+    board('Most Claude Code sessions','in '+currentMonth+', terminal coding sessions','codeSessions','sessions','var(--code)',act)+
     '</div>';
   h+='<div class="panel">'+usageSplit(md)+'</div>';
   h+=table(md);
@@ -441,19 +442,27 @@ function depts(md){
     '<div class="bars">'+rows+'</div>';
 }
 function setDept(d){ deptFilter=(deptFilter===d?'all':d); render(); }
+function setBand(k){ bandFilter=(bandFilter===k?null:k); render(); }
 
 function usageSplit(md){
   const days=md.days, b={active:[],min:[],none:[]};
   md.members.forEach(m=>b[statusOf(m,days).k].push(m));
   const t=md.members.length;
-  const row=(l,c,list)=>'<div class="bar"><div class="bar-l">'+l+'</div><div class="bar-t">'+
+  const row=(k,l,c,list)=>'<div class="bar bar-c'+(bandFilter===k?' on':'')+
+    '" onclick="setBand(\''+k+'\')" title="Click to list these people in the table below">'+
+    '<div class="bar-l">'+l+'</div><div class="bar-t">'+
     '<div class="bar-f" style="width:'+(t?list.length/t*100:0)+'%;background:'+c+'"></div></div>'+
     '<div class="bar-v">'+list.length+' of '+t+'</div></div>';
-  const off=b.none.map(m=>m.name).sort();
-  return '<div class="p-title">Who is actually using it<span class="p-note">active means used on 40% or more of the days so far</span></div>'+
-    '<div class="bars">'+row('Active','var(--ok)',b.active)+row('Minimal','var(--warn)',b.min)+
-    row('No usage','var(--bad)',b.none)+'</div>'+
-    (off.length?'<div class="note"><b>No usage this month:</b> '+esc(off.join(', '))+'.</div>':'');
+  const names=(bandFilter&&b[bandFilter]?b[bandFilter]:b.none).map(m=>m.name).sort();
+  const lbl={active:'Active',min:'Minimal',none:'No usage'}[bandFilter||'none'];
+  return '<div class="p-title">Who is actually using it'+
+    '<span class="p-note">click a band to list those people · counts any day with activity '+
+    'anywhere in Claude — chat, Cowork or Claude Code — not per product</span></div>'+
+    '<div class="bars">'+row('active','Active (used it on 40%+ of days)','var(--ok)',b.active)+
+    row('min','Minimal (used it, but on under 40% of days)','var(--warn)',b.min)+
+    row('none','No usage at all','var(--bad)',b.none)+'</div>'+
+    (names.length?'<div class="note"><b>'+esc(lbl)+' in '+esc(currentMonth)+' ('+names.length+'):</b> '+
+      esc(names.join(', '))+'.</div>':'');
 }
 
 function board(title,sub,key,unit,col,act){
@@ -470,7 +479,7 @@ function board(title,sub,key,unit,col,act){
 function table(md){
   const depts=Object.keys(DATA.meta.deptTotals||{}).sort();
   const sorts=[['name','Name (A–Z)'],['daysActive','Most days active'],['messages','Most Chat messages'],
-    ['coworkMessages','Most Cowork messages'],['codeSessions','Most Code sessions'],['spend','Most spend']];
+    ['coworkMessages','Most Cowork messages'],['codeSessions','Most Code sessions']];
   return '<div class="panel"><div class="ctrls">'+
     '<span class="ctrl-l">All members</span>'+
     '<input class="q" id="q" placeholder="Search name, role or department" value="'+esc(term)+
@@ -489,7 +498,7 @@ function table(md){
     '<span class="cnt" id="cnt"></span></div>'+
     '<div class="tw" id="tbox"><table><thead><tr><th>Name / title</th><th>Department</th>'+
     '<th class="n">Days</th><th class="n">Chat msgs</th><th class="n">Cowork msgs</th>'+
-    '<th class="n">Code sessions</th><th class="n">Spend</th></tr></thead>'+
+    '<th class="n">Code sessions</th></tr></thead>'+
     '<tbody id="tb"></tbody></table></div></div>';
 }
 
@@ -497,6 +506,7 @@ function rowsNow(){
   const md=DATA.months[currentMonth];
   let r=md.members.slice();
   if(deptFilter!=='all') r=r.filter(m=>m.dept===deptFilter);
+  if(bandFilter) r=r.filter(m=>statusOf(m,md.days).k===bandFilter);
   const t=term.trim().toLowerCase();
   if(t) r=r.filter(m=>m.name.toLowerCase().includes(t)||
     (m.title||'').toLowerCase().includes(t)||(m.dept||'').toLowerCase().includes(t));
@@ -515,7 +525,7 @@ function paintRows(){
       '<td><span class="chip" style="color:'+col+'">'+esc(m.dept)+'</span></td>'+
       '<td class="days">'+m.daysActive+' / '+days+'</td>'+
       n(m.messages,'chat')+n(m.coworkMessages,'cowork')+n(m.codeSessions,'code')+
-      '<td class="n '+(m.spend?'spend':'z')+'">'+(m.spend?money(m.spend):'—')+'</td></tr>';
+      '</tr>';
   }).join('') : '<tr><td colspan="7" class="nodata">Nobody matches that.</td></tr>';
   const c=document.getElementById('cnt');
   if(c) c.textContent=r.length+' of '+md.members.length+' members';
@@ -533,7 +543,7 @@ function csv(){
   const out=r.map(m=>({Name:m.name,Title:m.title,Department:m.dept,
     Status:statusOf(m,md.days).label,'Days active':m.daysActive,'Days in period':md.days,
     'Chat messages':m.messages,'Cowork messages':m.coworkMessages,
-    'Code sessions':m.codeSessions,'Spend USD':(m.spend||0).toFixed(2)}));
+    'Code sessions':m.codeSessions}));
   const h=Object.keys(out[0]);
   const body=[h.join(',')].concat(out.map(x=>h.map(k=>{
     const v=String(x[k]); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(','))).join('\n');
@@ -552,8 +562,20 @@ function vUsage(){
     card('File operations',fmt(s.outputs.fileOperations),'Files created or edited by Claude','cowork')+
     card('Pull requests',fmt(s.outputs.prsCreated),'Raised with Claude Code','code')+
     card('MCP writes',fmt(s.outputs.mcpWrites),'Actions written back to connected tools','')+
+    card('Actions per prompt',s.agentic.actionsPerPrompt.toFixed(1),
+      'Steps Claude takes per instruction given','cowork')+
     card('Est. time saved','~'+fmt(s.timeSaved.hours)+' hrs',"Anthropic's model, assumptions below",'spend')+
     '</div>';
+  h+='<div class="panel"><div class="p-title">What "actions per prompt" means'+
+    '<span class="p-note">rolling 30 days to '+niceDate(s.dataAsOf)+'</span></div>'+
+    '<div class="note" style="margin-top:0">Every instruction someone gives Claude currently '+
+    'produces <b>'+s.agentic.actionsPerPrompt.toFixed(1)+'</b> steps on average — reading a file, '+
+    'running a search, editing something, calling a connected tool. A figure near 1 means people '+
+    'are using Claude as a question-and-answer box. Above about 4 means they are handing over whole '+
+    'tasks and Claude is working through them. This is the one number here that describes <i>how</i> '+
+    'Claude is being used rather than how much, which is why it sits on this page.</div>'+
+    '<div class="note">Read it with care: it is an average across a small organisation, so a single '+
+    'heavy Cowork or Claude Code user moves it. Treat a change of a few tenths as noise.</div></div>';
   h+='<div class="panel"><div class="p-title">How the time saved figure is built'+
     '<span class="p-note">Anthropic\'s default assumptions, editable in the Claude admin console</span></div>'+
     '<div class="tw"><table><thead><tr><th>Verified output</th><th class="n">Minutes saved each</th>'+
@@ -572,14 +594,14 @@ function vUsage(){
   return h;
 }
 function depth(s){
-  const a=s.adoptionLevel, seats=DATA.meta.people;
+  const a=s.adoptionLevel, seats=DATA.meta.members;
   const rows=[['Have a seat',a.allMembers,'var(--chat)'],['Active this month',a.monthly,'var(--chat)'],
     ['Active this week',a.weekly,'var(--chat)'],['Active yesterday',a.daily,'var(--amber)']]
     .map(([l,v,c])=>'<div class="bar"><div class="bar-l">'+l+'</div><div class="bar-t">'+
       '<div class="bar-f" style="width:'+(v/seats*100)+'%;background:'+c+'"></div></div>'+
       '<div class="bar-v">'+v+' ('+Math.round(v/seats*100)+'%)</div></div>').join('');
   return '<div class="panel" style="margin:0"><div class="p-title">Depth of adoption'+
-    '<span class="p-note">of '+seats+' people with a seat</span></div><div class="bars">'+rows+'</div>'+
+    '<span class="p-note">of the '+seats+' current members · rolling 30 days to '+niceDate(s.dataAsOf)+'</span></div><div class="bars">'+rows+'</div>'+
     '<div class="note">Breadth is strong and depth is thin. Nearly everyone has used Claude at some '+
     'point this month, but only <b>'+a.daily+'</b> used it yesterday. Daily use is the number to move.</div></div>';
 }
@@ -636,8 +658,9 @@ function projects(s){
     'repeat work gets faster, and right now nobody is sharing them.</div></div>';
 }
 function coworkTop(s){
-  return '<div class="panel" style="margin:0"><div class="p-title">Heaviest Cowork users'+
-    '<span class="p-note">Claude working directly on files and tasks</span></div><div class="lb">'+
+  return '<div class="panel" style="margin:0"><div class="p-title">Most Cowork sessions'+
+    '<span class="p-note">rolling 30 days to '+niceDate(s.dataAsOf)+' · ranked by sessions, not messages</span>'+
+    '</div><div class="lb">'+
     s.topCoworkMembers.map((m,i)=>'<div class="lb-row"><div class="lb-i">'+(i+1)+'</div>'+
       '<div class="lb-n">'+esc(nameOf(m.email))+'<div class="lb-s">'+fmt(m.messages)+' messages</div></div>'+
       '<div class="lb-v" style="color:var(--cowork)">'+fmt(m.sessions)+
@@ -658,7 +681,7 @@ function codePanel(s){
    accounting terms. Seats and usage are two different
    charges in two different currencies and are never added. */
 function vCost(){
-  const c=DATA.snapshot.cost, sp=DATA.snapshot.spend;
+  const c=DATA.snapshot.cost;
   const gbp=n=>'£'+Number(n).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
   const usd=n=>'$'+Math.round(Number(n)).toLocaleString('en-GB');
 
@@ -720,13 +743,21 @@ function vCost(){
     c.watch.map(w=>'<div class="note" style="margin-top:0;margin-bottom:11px">'+
       '<b>'+esc(w.title)+'.</b> '+esc(w.body)+'</div>').join('')+'</div>';
 
-  /* who spends most — clearly labelled window */
-  h+='<div class="panel"><div class="p-title">Highest usage by person'+
-    '<span class="p-note">last 30 days, US dollars. Usage only, not seats.</span></div>'+
-    '<div class="lb">'+sp.topMembers.map((m,i)=>
+  /* who the metered spend actually goes to — billed amounts, not estimates */
+  const mt=c.metered, share=v=>Math.round(v/mt.total*100);
+  h+='<div class="panel"><div class="p-title">Who the metered usage goes to'+
+    '<span class="p-note">actual billed amounts · '+esc(mt.period)+' · resets '+esc(mt.resets)+'</span></div>'+
+    '<div class="note" style="margin-top:0">These are the amounts Claude has billed, taken from the '+
+    'usage page, not an estimate. <b>'+mt.usersBilled+' of '+mt.usersTotal+'</b> people have any '+
+    'metered usage at all; the other '+(mt.usersTotal-mt.usersBilled)+' are fully covered by their seat.</div>'+
+    '<div class="lb">'+mt.top.map((m,i)=>
       '<div class="lb-row"><div class="lb-i">'+(i+1)+'</div><div class="lb-n">'+
-      esc(nameOf(m.email))+'</div><div class="lb-v" style="color:var(--spend)">'+
-      usd(m.spend)+'</div></div>').join('')+'</div></div>';
+      esc(nameOf(m.email))+'<div class="lb-s">'+share(m.spend)+'% of the period total</div></div>'+
+      '<div class="lb-v" style="color:var(--spend)">'+gbp(m.spend)+'</div></div>').join('')+'</div>'+
+    '<div class="note"><b>'+gbp(mt.total)+'</b> in total. No spend cap is set anywhere: the '+
+    'organisation limit is '+esc(mt.orgLimit)+', both seat defaults are Unlimited ('+
+    mt.seatLimits.standardSeats+' standard, '+mt.seatLimits.premiumSeats+' premium), and all '+
+    mt.usersTotal+' individual limits are Unlimited.</div></div>';
   return h;
 }
 
