@@ -407,7 +407,6 @@ function vMonthly(){
 
   let h=howTo();
   h+=windowNote();
-  h+='<div class="panel">'+trend()+'</div>';
   h+='<div class="cards">'+
     card('Active users',act.length+' <span class="of">/ '+seats+'</span>',
       Math.round(act.length/seats*100)+'% of the '+seats+' people who held a seat this month, one square each','',waffle)+
@@ -419,6 +418,7 @@ function vMonthly(){
       'Claude Code terminal sessions · '+act.filter(m=>m.codeSessions>0).length+' users','code')+
 
     '</div>';
+  h+='<div class="panel">'+trend()+'</div>';
   h+='<div class="panel">'+depts(md)+'</div>';
   h+='<div class="g3">'+
     board('Most chat messages','in '+currentMonth+', sent in Claude Chat','messages','msgs','var(--chat)',act)+
@@ -446,13 +446,17 @@ function trend(){
     g+='<line x1="'+PL+'" y1="'+gy+'" x2="'+(W-PR)+'" y2="'+gy+'" stroke="var(--line)"/>'+
        '<text x="'+(PL-12)+'" y="'+(gy+4)+'" fill="var(--faint)" font-size="11" text-anchor="end">'+
        Math.round(max*i/4).toLocaleString('en-GB')+'</text>';}
-  pts.forEach((p,i)=>{const last=i===pts.length-1;
-    g+='<text x="'+x(i)+'" y="'+(H-10)+'" fill="'+(last?'var(--ink)':'var(--faint)')+
-       '" font-size="11" text-anchor="middle"'+(last?' font-weight="500"':'')+'>'+esc(p.m)+'</text>';});
+  // the month you have selected is marked, so the chart visibly answers the pills
+  const sel=Math.max(0,MONTHS.indexOf(currentMonth));
+  g+='<line x1="'+x(sel)+'" y1="'+PT+'" x2="'+x(sel)+'" y2="'+(PT+ih)+
+     '" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 3" opacity="0.4"/>';
+  pts.forEach((p,i)=>{const on=i===sel;
+    g+='<text x="'+x(i)+'" y="'+(H-10)+'" fill="'+(on?'var(--ink)':'var(--faint)')+
+       '" font-size="11" text-anchor="middle"'+(on?' font-weight="500"':'')+'>'+esc(p.m)+'</text>';});
   vis.forEach(s=>{
     g+='<path d="'+pts.map((p,i)=>(i?'L':'M')+x(i)+' '+y(p[s.k])).join(' ')+
        '" fill="none" stroke="'+s.c+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
-    pts.forEach((p,i)=>{g+='<circle cx="'+x(i)+'" cy="'+y(p[s.k])+'" r="3.4" fill="'+s.c+
+    pts.forEach((p,i)=>{g+='<circle cx="'+x(i)+'" cy="'+y(p[s.k])+'" r="'+(i===sel?5.6:3.4)+'" fill="'+s.c+
       '" stroke="var(--surface)" stroke-width="2"><title>'+esc(p.m)+' · '+esc(s.l)+': '+fmt(p[s.k])+'</title></circle>';});
   });
   const last=pts[pts.length-1];
@@ -463,11 +467,18 @@ function trend(){
   g+='</svg>';
   const leg=S.map(s=>'<div class="legend-i'+(hidden[s.k]?' off':'')+'" onclick="tog(\''+s.k+'\')">'+
     '<i style="background:'+s.c+'"></i>'+esc(s.l)+'</div>').join('');
+  const cur=pts[sel];
+  const summary=S.filter(t=>!hidden[t.k])
+    .map(t=>'<span style="color:'+t.c+'">'+fmt(cur[t.k])+'</span> '+esc(t.l.toLowerCase())).join(' · ');
   return '<div style="display:flex;justify-content:space-between;align-items:center;gap:14px;'+
     'flex-wrap:wrap;margin-bottom:14px"><div class="p-title" style="margin:0">Usage trends · '+
     esc(MONTHS[0].toUpperCase())+' – '+esc(MONTHS[MONTHS.length-1].toUpperCase())+
-    '<span class="p-note">click a legend item to show or hide a line</span></div>'+
-    '<div class="legend">'+leg+'</div></div><div style="overflow-x:auto">'+g+'</div>';
+    '<span class="p-note">every month, with '+esc(longMonth(currentMonth))+' marked · '+
+    'click a legend item to show or hide a line</span></div>'+
+    '<div class="legend">'+leg+'</div></div>'+
+    '<div class="note" style="margin-top:0;margin-bottom:12px"><b>'+esc(longMonth(currentMonth))+
+    ':</b> '+summary+'</div>'+
+    '<div style="overflow-x:auto">'+g+'</div>';
 }
 function tog(k){ hidden[k]=!hidden[k]; render(); }
 
