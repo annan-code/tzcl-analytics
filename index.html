@@ -840,10 +840,8 @@ function vCost(){
       '<div class="lb-s">'+esc(m.title)+' · '+esc(m.email)+'</div></div>'+
       '<div class="lb-v" style="color:var(--spend)">'+gbp(m.spend)+
       '<span class="lb-u">'+share(m.spend)+'% of total</span></div></div>').join('')+'</div>'+
-    '<div class="note"><b>'+gbp(mt.total)+'</b> in total. No spend cap is set anywhere: the '+
-    'organisation limit is '+esc(mt.orgLimit)+', both seat defaults are Unlimited ('+
-    mt.seatLimits.standardSeats+' standard, '+mt.seatLimits.premiumSeats+' premium), and all '+
-    mt.usersTotal+' individual limits are Unlimited.</div></div>';
+    '<div class="note"><b>'+gbp(mt.total)+'</b> in total across '+mt.usersTotal+' people ('+
+    mt.standardSeats+' standard seats, '+mt.premiumSeats+' premium).</div></div>';
   return h;
 }
 
