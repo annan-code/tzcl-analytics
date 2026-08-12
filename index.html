@@ -396,8 +396,8 @@ function vMonthly(){
   const waffle='<div class="waffle">'+Array.from({length:seats},(_,i)=>
     '<i class="'+(i<act.length?'':'off')+'"></i>').join('')+'</div>';
 
-  let h=windowNote();
-  h+=howTo();
+  let h=howTo();
+  h+=windowNote();
   h+='<div class="panel">'+trend()+'</div>';
   h+='<div class="cards">'+
     card('Active users',act.length+' <span class="of">/ '+seats+'</span>',
