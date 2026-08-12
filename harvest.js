@@ -80,7 +80,7 @@
     .map((m) => ({ connector: m[1].trim(), users: num(m[2]), reads: num(m[3]), writes: num(m[4]) }))
     .filter((c) => c.connector !== 'Top');
 
-  // Member spend: "tom@transitionzero.org $762.07"
+  // Member spend, one row per line: "someone@example.org $12.34"
   H.memberSpend = [...T.matchAll(/^(\S+@\S+\.\w+)\s+\$([0-9,.]+)$/gm)]
     .map((m) => ({ email: m[1], spend: num(m[2]) }));
 

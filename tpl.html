@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>TransitionZero · Claude Analytics</title>
+<style>
+/*__FONTS__*/
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#EDF1FB; --surface:#FFFFFF; --surface2:#F6F8FD; --panel:#2E374E;
+  --ink:#1F283D; --muted:rgba(31,40,61,.56); --faint:rgba(31,40,61,.34);
+  --line:rgba(31,40,61,.11); --track:rgba(31,40,61,.09);
+  --amber:#FFB405; --link:#2E4AD9;
+  --chat:#008DCE; --cowork:#BA63DA; --code:#00C0B0; --spend:#FFB405;
+  --ok:#00C0B0; --warn:#FFB405; --bad:#FE8348;
+  --d-tech:#008DCE; --d-ops:#00C0B0; --d-sol:#FE8348;
+  --d-prod:#BA63DA; --d-ei:#EE9DDA; --d-ceo:#69B2F5;
+}
+body.dark{
+  --bg:#1B2334; --surface:#232D42; --surface2:#1F283A; --panel:#141B29;
+  --ink:#EDF1FB; --muted:rgba(237,241,251,.58); --faint:rgba(237,241,251,.36);
+  --line:rgba(237,241,251,.13); --track:rgba(237,241,251,.10);
+}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:26px 26px 40px;
+  font-family:"Good Sans","Work Sans",ui-sans-serif,system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;transition:background .2s,color .2s}
+.page{max-width:1360px;margin:0 auto}
+a{color:var(--link);text-decoration:none}
+
+/* ── password gate ─────────────────────────────────────── */
+.gate{max-width:430px;margin:12vh auto;background:var(--surface);
+  border:1px solid var(--line);border-radius:6px;padding:38px 36px}
+.gate .mark{width:150px;margin-bottom:26px}
+.gate .mark svg{width:100%;height:auto;display:block}
+.gate h2{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;margin-bottom:9px}
+.gate p{font-size:.83rem;color:var(--muted);line-height:1.65;margin-bottom:22px}
+.gate input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:4px;
+  background:var(--surface2);color:var(--ink);font-size:.95rem;outline:none;font-family:inherit}
+.gate input:focus{border-color:var(--link)}
+.gate button{width:100%;margin-top:11px;padding:12px;border:none;border-radius:100px;
+  background:var(--ink);color:var(--surface);font-size:.9rem;font-weight:500;
+  cursor:pointer;font-family:inherit}
+.gate button:disabled{opacity:.5;cursor:default}
+.gate .err{color:var(--bad);font-size:.82rem;margin-top:12px;min-height:1.15em}
+
+/* ── header ────────────────────────────────────────────── */
+.brand{width:172px;margin-bottom:12px}
+.brand svg{width:100%;height:auto;display:block}
+body.dark .brand svg path{fill:var(--ink)}
+.head{display:flex;align-items:baseline;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.head-l{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+h1{font-size:2.35rem;font-weight:700;letter-spacing:-.03em;line-height:1}
+.org{font-size:.8rem;color:var(--faint);text-transform:uppercase;letter-spacing:.13em}
+.pills{display:flex;gap:7px;flex-wrap:wrap}
+.pill{padding:7px 15px;border-radius:100px;border:1px solid var(--line);background:var(--surface);
+  color:var(--ink);font-size:.79rem;cursor:pointer;white-space:nowrap;font-family:inherit;
+  transition:background .15s,color .15s}
+.pill:hover{border-color:var(--faint)}
+.pill.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.pill .now{font-size:.6rem;opacity:.7;margin-left:5px;text-transform:uppercase;letter-spacing:.08em}
+
+.rule{border-top:1px solid var(--ink);margin:16px 0 0;opacity:.85}
+.views{display:flex;gap:26px;border-bottom:1px solid var(--line);margin-bottom:20px}
+.view{padding:13px 0;border:none;background:none;font-family:inherit;font-size:.95rem;
+  color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.view:hover{color:var(--ink)}
+.view.on{color:var(--ink);font-weight:500;border-bottom-color:var(--amber)}
+
+.wnote{display:inline-flex;align-items:center;gap:9px;flex-wrap:wrap;
+  border:1px solid var(--line);background:var(--surface);border-radius:100px;
+  padding:7px 17px;font-size:.79rem;color:var(--muted);margin-bottom:18px}
+.wnote b{color:var(--ink);font-weight:500}
+.wnote .sep{color:var(--faint)}
+.wnote .live{display:inline-flex;align-items:center;gap:6px;color:var(--ink);font-weight:500}
+.wnote .live i{width:6px;height:6px;border-radius:50%;background:var(--amber);display:block}
+
+/* ── cards ─────────────────────────────────────────────── */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:14px;margin-bottom:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:19px 21px 21px}
+.card.dark{background:var(--panel);border-color:var(--panel)}
+.card.dark .k-label{color:var(--amber)}
+.card.dark .k-sub{color:rgba(237,241,251,.62)}
+.card.dark .k-num{color:#fff}
+.k-label{font-size:.7rem;font-weight:500;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.11em;margin-bottom:11px}
+.k-num{font-family:"Redaction 35",Georgia,serif;font-size:2.15rem;line-height:1;letter-spacing:0}
+.k-num .of{font-size:1rem;color:var(--muted);font-family:inherit}
+.k-sub{font-size:.775rem;color:var(--muted);margin-top:11px;line-height:1.55}
+.k-num.chat{color:var(--chat)}.k-num.cowork{color:var(--cowork)}
+.k-num.code{color:var(--code)}.k-num.spend{color:var(--spend)}
+
+.waffle{display:flex;flex-wrap:wrap;gap:3px;margin-top:12px;max-width:210px}
+.waffle i{width:11px;height:11px;background:var(--amber);display:block}
+.waffle i.off{background:var(--track)}
+
+/* ── panels ────────────────────────────────────────────── */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;
+  padding:19px 21px 21px;margin-bottom:18px}
+.p-title{font-size:.7rem;font-weight:500;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.11em;margin-bottom:16px}
+.p-note{font-size:.74rem;color:var(--faint);font-weight:400;text-transform:none;
+  letter-spacing:0;margin-left:9px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+@media(max-width:980px){.g2,.g3{grid-template-columns:1fr}}
+
+.note{background:var(--surface2);border-top:2px solid var(--amber);border-radius:0 0 4px 4px;
+  padding:13px 15px;font-size:.79rem;color:var(--muted);line-height:1.65;margin-top:16px}
+.note b{color:var(--ink);font-weight:500}
+
+/* ── bars ──────────────────────────────────────────────── */
+.bars{display:grid;gap:11px}
+.sel-m{font-weight:500}
+.howto{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 15px;margin-bottom:14px}
+.howto summary{cursor:pointer;font-size:.85rem;font-weight:500;letter-spacing:.01em}
+.howto summary::marker{color:var(--faint)}
+.howto-b{font-size:.85rem;line-height:1.65;color:var(--muted);max-width:82ch;margin-top:9px}
+.howto-b p{margin:0 0 8px}
+.howto-b ul{margin:0 0 8px;padding-left:18px}
+.howto-b li{margin-bottom:4px}
+.howto-b b{color:var(--ink)}
+.note.warnbox{border-left:3px solid var(--warn);padding-left:11px}
+.bar{display:flex;align-items:center;gap:14px}
+.bar.click,.bar-c{cursor:pointer;border-radius:4px;padding:2px 4px;margin:-2px -4px}
+.bar.click:hover,.bar-c:hover{background:var(--surface2)}
+.bar-c .bar-l{width:250px}
+.bar.on{background:var(--surface2);outline:1px solid var(--line)}
+.bar-l{font-size:.82rem;width:172px;flex-shrink:0}
+.bar-t{flex:1;height:7px;background:var(--track);border-radius:100px;overflow:hidden;min-width:50px}
+.bar-f{height:100%;border-radius:100px;transition:width .4s ease}
+.bar-v{font-size:.78rem;color:var(--muted);width:104px;text-align:right;flex-shrink:0;
+  font-variant-numeric:tabular-nums}
+
+/* ── leaderboards ──────────────────────────────────────── */
+.lb{display:grid;gap:1px}
+.lb-row{display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px solid var(--line)}
+.lb-row:last-child{border-bottom:none}
+.lb-i{font-size:.7rem;color:var(--faint);width:13px;flex-shrink:0;font-variant-numeric:tabular-nums}
+.lb-n{flex:1;font-size:.84rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-s{font-size:.71rem;color:var(--faint);margin-top:2px}
+.lb-v{font-size:1.05rem;flex-shrink:0;font-family:"Redaction 35",Georgia,serif}
+.lb-u{font-size:.68rem;color:var(--muted);margin-left:5px;font-family:inherit}
+.lb-empty{font-size:.79rem;color:var(--faint);padding:12px 2px}
+
+/* ── controls + table ──────────────────────────────────── */
+.ctrls{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.ctrl-l{font-size:.7rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.11em}
+input.q,select.sel{background:var(--surface);border:1px solid var(--line);border-radius:4px;
+  padding:9px 12px;color:var(--ink);font-size:.83rem;outline:none;font-family:inherit}
+input.q{width:250px}
+input.q::placeholder{color:var(--faint)}
+input.q:focus,select.sel:focus{border-color:var(--link)}
+.csv{padding:9px 19px;border:none;border-radius:100px;background:var(--amber);color:#3d2a00;
+  font-size:.81rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+.csv:hover{filter:brightness(.96)}
+.cnt{font-size:.77rem;color:var(--faint);margin-left:auto;font-variant-numeric:tabular-nums}
+.key{display:flex;gap:14px;flex-wrap:wrap}
+.key-i{display:flex;align-items:center;gap:6px;font-size:.73rem;color:var(--muted)}
+.sq{width:9px;height:9px;flex-shrink:0}
+.sq-a{background:var(--ok)}.sq-m{background:var(--warn)}.sq-n{background:var(--bad)}
+
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.83rem}
+th{text-align:left;padding:0 12px 11px;color:var(--muted);font-size:.68rem;font-weight:500;
+  text-transform:uppercase;letter-spacing:.11em;border-bottom:1px solid var(--ink);white-space:nowrap}
+td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:hover td{background:var(--surface2)}
+tbody tr.none td{opacity:.55}
+.nm{display:flex;align-items:center;gap:11px}
+.nm-d{width:8px;height:8px;flex-shrink:0}
+.nm-t{font-weight:500;line-height:1.3}
+.nm-s{font-size:.73rem;color:var(--muted);margin-top:2px;line-height:1.35}
+.chip{display:inline-block;padding:3px 10px;border-radius:3px;font-size:.65rem;font-weight:500;
+  text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;
+  border:1px solid currentColor;background:transparent}
+.n{text-align:right;font-variant-numeric:tabular-nums}
+.n.chat{color:var(--chat)}.n.cowork{color:var(--cowork)}
+.n.code{color:var(--code)}.n.spend{color:var(--spend)}
+.n.z{color:var(--faint)}
+.days{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.nodata{text-align:center;padding:38px;color:var(--faint);font-size:.87rem}
+
+.stack{display:flex;height:26px;gap:2px;border-radius:3px;overflow:hidden}
+.stack i{display:block;transition:opacity .15s}
+.stack i:hover{opacity:.75}
+.slegend{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px}
+.slegend span{display:flex;align-items:center;gap:7px;font-size:.75rem;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.legend{display:flex;gap:18px;flex-wrap:wrap}
+.legend-i{display:flex;align-items:center;gap:7px;font-size:.78rem;color:var(--muted);
+  cursor:pointer;user-select:none}
+.legend-i.off{opacity:.32}
+.legend-i i{width:16px;height:2px;display:block;flex-shrink:0}
+.tag{display:inline-block;padding:2px 8px;border-radius:100px;font-size:.63rem;font-weight:500;
+  color:var(--cowork);border:1px solid currentColor;letter-spacing:.05em}
+.foot{font-size:.74rem;color:var(--faint);text-align:center;margin-top:26px;padding-top:18px;
+  border-top:1px solid var(--line);line-height:1.75}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate">
+  <div class="mark">/*__LOGO__*/</div>
+  <h2>Claude Analytics</h2>
+  <p>This dashboard contains named staff usage and spend. Enter the password to decrypt it.
+     Decryption happens in your browser and the password is never sent anywhere.</p>
+  <input id="pw" type="password" placeholder="Password" autocomplete="current-password">
+  <button id="go">Unlock</button>
+  <div class="err" id="err"></div>
+</div>
+
+<div class="page hide" id="page">
+  <div class="brand">/*__LOGO__*/</div>
+  <div class="head">
+    <div class="head-l">
+      <h1>Claude Analytics</h1>
+      <div class="org" id="org"></div>
+    </div>
+    <div class="pills">
+      <span id="monthPills" style="display:contents"></span>
+      <button class="pill" id="modeBtn" onclick="toggleMode()">Dark mode</button>
+    </div>
+  </div>
+  <div class="rule"></div>
+  <div class="views">
+    <button class="view on" id="v-monthly" onclick="setView('monthly')">Monthly adoption</button>
+    <button class="view" id="v-usage" onclick="setView('usage')">Usage detail</button>
+    <button class="view" id="v-cost" onclick="setView('cost')">Cost</button>
+  </div>
+  <div id="app"></div>
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+/* ═══ decryption gate ═══════════════════════════════════ */
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function unlock(pw){
+  const res = await fetch('data.enc?v=' + Date.now());
+  if(!res.ok) throw new Error('Could not load the data file (HTTP ' + res.status + ')');
+  const p = await res.json();
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt:b64(p.salt), iterations:p.iterations, hash:'SHA-256'},
+    km, {name:'AES-GCM', length:256}, false, ['decrypt']);
+  let plain = await crypto.subtle.decrypt({name:'AES-GCM', iv:b64(p.iv)}, key, b64(p.ct));
+  if(p.gz){                       // payload is gzipped JSON, inflate it
+    const ds=new DecompressionStream('gzip');
+    const w=ds.writable.getWriter(); w.write(new Uint8Array(plain)); w.close();
+    plain=await new Response(ds.readable).arrayBuffer();
+  }
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+const gate=document.getElementById('gate'), pwEl=document.getElementById('pw'),
+      goEl=document.getElementById('go'), errEl=document.getElementById('err');
+async function attempt(){
+  if(!pwEl.value) return;
+  goEl.disabled=true; goEl.textContent='Decrypting…'; errEl.textContent='';
+  try{
+    DATA = await unlock(pwEl.value);
+    gate.classList.add('hide');
+    document.getElementById('page').classList.remove('hide');
+    boot();
+  }catch(e){
+    errEl.textContent = /operation|decrypt/i.test(e.message||String(e))
+      ? 'Wrong password.' : ('Could not open: ' + e.message);
+    goEl.disabled=false; goEl.textContent='Unlock'; pwEl.select();
+  }
+}
+goEl.addEventListener('click', attempt);
+pwEl.addEventListener('keydown', e => { if(e.key==='Enter') attempt(); });
+pwEl.focus();
+
+/* ═══ state ═════════════════════════════════════════════ */
+let DATA=null, MONTHS=[], currentMonth=null, view='monthly';
+let deptFilter='all', bandFilter=null, sortKey='name', term='', hidden={}, helpOpen=false;
+
+const DCOL={'Technology':'var(--d-tech)','Operations':'var(--d-ops)',
+  'Solutions Engineering':'var(--d-sol)','Product':'var(--d-prod)',
+  'Engagement & Insights':'var(--d-ei)','Office of CEO':'var(--d-ceo)'};
+const CAT=['#008DCE','#00C0B0','#FE8348','#BA63DA','#EE9DDA','#69B2F5','#D9DA7E'];
+
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>n==null?'—':Number(n).toLocaleString('en-GB');
+const money=n=>'$'+Number(n).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+const money0=n=>'$'+Math.round(Number(n)).toLocaleString('en-GB');
+const pc=n=>Math.round(n*100)+'%';
+const nameOf=e=>(e||'').split('@')[0].replace(/\./g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+const MONL={Jan:'January',Feb:'February',Mar:'March',Apr:'April',May:'May',Jun:'June',
+  Jul:'July',Aug:'August',Sep:'September',Oct:'October',Nov:'November',Dec:'December'};
+function niceDate(iso){ if(!iso) return 'unknown';
+  const [y,m,d]=iso.split('-').map(Number);
+  return d+' '+Object.values(MONL)[m-1]+' '+y; }
+function statusOf(m,days){
+  if(!m.daysActive) return {k:'none',label:'No usage',c:'var(--bad)'};
+  if(m.daysActive/days>=0.4) return {k:'active',label:'Active',c:'var(--ok)'};
+  return {k:'min',label:'Minimal',c:'var(--warn)'};
+}
+
+function boot(){
+  MONTHS=Object.keys(DATA.months);
+  currentMonth=MONTHS[MONTHS.length-1];
+  document.getElementById('org').textContent =
+    DATA.meta.org+' · '+DATA.meta.seatsPurchased+' seats · '+
+    DATA.meta.seatsInUse+' in use · '+DATA.meta.seatsUnused+' unused · updated monthly';
+  paintPills(); render();
+}
+function paintPills(){
+  document.getElementById('monthPills').innerHTML = MONTHS.map((m,i)=>
+    '<button class="pill'+(m===currentMonth?' on':'')+'" onclick="setMonth(\''+m+'\')">'+esc(m)+
+    (i===MONTHS.length-1?'<span class="now">now</span>':'')+'</button>').join('');
+}
+function longMonth(m){ const p=m.split(' '); return (MONL[p[0]]||p[0])+' '+p[1]; }
+function setMonth(m){
+  // Filters and scroll position always survive a month change, from either control.
+  // Switching month nearly always means "same slice of people, different month".
+  currentMonth=m;
+  const y=window.scrollY;
+  paintPills(); render();
+  window.scrollTo(0,y);
+}
+function setView(v){
+  view=v;
+  ['monthly','usage','cost'].forEach(k=>document.getElementById('v-'+k).classList.toggle('on',k===v));
+  document.getElementById('monthPills').style.display = v==='monthly'?'contents':'none';
+  render();
+}
+function toggleMode(){
+  document.body.classList.toggle('dark');
+  document.getElementById('modeBtn').textContent =
+    document.body.classList.contains('dark')?'Light mode':'Dark mode';
+  render();
+}
+
+function render(){
+  if(!DATA) return;
+  document.getElementById('app').innerHTML =
+    view==='monthly'?vMonthly(): view==='usage'?vUsage(): vCost();
+  if(view==='monthly') paintRows();
+  document.getElementById('foot').innerHTML =
+    'Monthly figures: '+esc(DATA.meta.monthlySource)+'.<br>'+
+    'Usage detail and cost: '+esc(DATA.snapshot.source)+', fetched '+
+    esc(niceDate(DATA.snapshot.fetchedAt.slice(0,10)))+'.';
+}
+
+function howTo(){
+  return '<details class="howto"'+(helpOpen?' open':'')+' ontoggle="helpOpen=this.open">'+
+    '<summary>How to use this dashboard</summary>'+
+    '<div class="howto-b">'+
+    '<p><b>It is updated once a month</b> and the web address never changes, so you can '+
+    'bookmark it and come back. Each refresh adds the month that has just finished.</p>'+
+    '<p><b>Pick a month</b> using the buttons at the top. The one marked NOW is the month '+
+    'we are currently in, so it is incomplete and its numbers will look low.</p>'+
+    '<p><b>The three tabs:</b></p>'+
+    '<ul>'+
+    '<li><b>Monthly adoption</b> — who used Claude in the month you have selected, in which '+
+    'department, and how much.</li>'+
+    '<li><b>Usage detail</b> — what people are doing with it: projects, skills, connectors, '+
+    'file types, Claude Code. This one always covers the last 30 days rather than a calendar '+
+    'month, because that is the only window Claude reports it over.</li>'+
+    '<li><b>Cost</b> — what Claude costs and where the money goes.</li>'+
+    '</ul>'+
+    '<p><b>Things you can click:</b> a department bar, or one of the Active / Minimal / No '+
+    'usage bands, filters the table of people underneath it. Click it again to clear. You can '+
+    'also search the table by name, role or department, sort it, and download it as a '+
+    'spreadsheet with the Download CSV button.</p>'+
+    '<p><b>Dark mode</b> is the button at the top right.</p>'+
+    '<p>Any question about a number — where it comes from or what it counts — ask Anna.</p>'+
+    '</div></details>';
+}
+
+function windowNote(){
+  const s=DATA.snapshot;
+  if(view==='monthly'){
+    const md=DATA.months[currentMonth], p=md.period.replace(/\s*\(partial\)\s*/i,'');
+    const live=currentMonth===MONTHS[MONTHS.length-1];
+    const mn=currentMonth.split(' ');
+    return '<div class="wnote"><b>'+esc((MONL[mn[0]]||mn[0])+' '+mn[1])+'</b>'+
+      '<span class="sep">·</span>'+esc(p)+'<span class="sep">·</span>'+md.days+' days counted'+
+      (live?'<span class="sep">·</span><span class="live"><i></i>Month in progress</span>':'')+
+      '<span class="sep">·</span>Data accurate to <b>'+esc(niceDate(s.dataAsOf))+'</b></div>';
+  }
+  return '<div class="wnote">'+esc(view==='cost'?'Month to date · 1 – 10 August 2026 · USD':s.window)+
+    '<span class="sep">·</span>Data accurate to <b>'+esc(niceDate(s.dataAsOf))+'</b></div>';
+}
+
+function card(label,val,sub,cls,extra){
+  return '<div class="card'+(cls==='dark'?' dark':'')+'"><div class="k-label">'+esc(label)+'</div>'+
+    '<div class="k-num '+(cls&&cls!=='dark'?cls:'')+'">'+val+'</div>'+
+    (extra||'')+(sub?'<div class="k-sub">'+esc(sub)+'</div>':'')+'</div>';
+}
+
+/* ═══ VIEW 1 · MONTHLY ══════════════════════════════════ */
+function vMonthly(){
+  const md=DATA.months[currentMonth];
+  if(!md) return '<div class="nodata">No data for this month.</div>';
+  const all=md.members, act=all.filter(m=>m.daysActive>0);
+  const sum=k=>act.reduce((a,b)=>a+(b[k]||0),0);
+  const seats=DATA.meta.people;
+  const waffle='<div class="waffle">'+Array.from({length:seats},(_,i)=>
+    '<i class="'+(i<act.length?'':'off')+'"></i>').join('')+'</div>';
+
+  let h=howTo();
+  h+=windowNote();
+  h+='<div class="panel">'+trend()+'</div>';
+  h+='<div class="cards">'+
+    card('Active users',act.length+' <span class="of">/ '+seats+'</span>',
+      Math.round(act.length/seats*100)+'% of the '+seats+' people who held a seat this month, one square each','',waffle)+
+    card('Chat messages',fmt(sum('messages')),
+      'Sent in Claude Chat · '+Math.round(sum('messages')/(act.length||1))+' avg per active user','chat')+
+    card('Cowork messages',fmt(sum('coworkMessages')),
+      'Claude working on files and tasks · '+act.filter(m=>m.coworkMessages>0).length+' users','cowork')+
+    card('Code sessions',fmt(sum('codeSessions')),
+      'Claude Code terminal sessions · '+act.filter(m=>m.codeSessions>0).length+' users','code')+
+
+    '</div>';
+  h+='<div class="panel">'+depts(md)+'</div>';
+  h+='<div class="g3">'+
+    board('Most chat messages','in '+currentMonth+', sent in Claude Chat','messages','msgs','var(--chat)',act)+
+    board('Most Cowork messages','in '+currentMonth+', Claude working on files and tasks','coworkMessages','msgs','var(--cowork)',act)+
+    board('Most Claude Code sessions','in '+currentMonth+', terminal coding sessions','codeSessions','sessions','var(--code)',act)+
+    '</div>';
+  h+=modelPanel();
+  h+='<div class="panel">'+usageSplit(md)+'</div>';
+  h+=table(md);
+  return h;
+}
+
+function trend(){
+  const S=[{k:'messages',l:'Chat messages',c:'#008DCE'},
+           {k:'coworkMessages',l:'Cowork messages',c:'#BA63DA'},
+           {k:'codeSessions',l:'Code sessions',c:'#00C0B0'}];
+  const pts=MONTHS.map(m=>{const mem=DATA.months[m].members,o={m:m.split(' ')[0]};
+    S.forEach(s=>o[s.k]=mem.reduce((a,b)=>a+(b[s.k]||0),0)); return o;});
+  const vis=S.filter(s=>!hidden[s.k]);
+  const max=Math.max(1,...pts.flatMap(p=>vis.map(s=>p[s.k])));
+  const W=1200,H=270,PL=64,PR=76,PT=14,PB=34,iw=W-PL-PR,ih=H-PT-PB;
+  const x=i=>PL+(pts.length===1?iw/2:i*iw/(pts.length-1)), y=v=>PT+ih-(v/max)*ih;
+  let g='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:270px" role="img" aria-label="Usage trend">';
+  for(let i=0;i<=4;i++){const gy=PT+ih-(i/4)*ih;
+    g+='<line x1="'+PL+'" y1="'+gy+'" x2="'+(W-PR)+'" y2="'+gy+'" stroke="var(--line)"/>'+
+       '<text x="'+(PL-12)+'" y="'+(gy+4)+'" fill="var(--faint)" font-size="11" text-anchor="end">'+
+       Math.round(max*i/4).toLocaleString('en-GB')+'</text>';}
+  pts.forEach((p,i)=>{const last=i===pts.length-1;
+    g+='<text x="'+x(i)+'" y="'+(H-10)+'" fill="'+(last?'var(--ink)':'var(--faint)')+
+       '" font-size="11" text-anchor="middle"'+(last?' font-weight="500"':'')+'>'+esc(p.m)+'</text>';});
+  vis.forEach(s=>{
+    g+='<path d="'+pts.map((p,i)=>(i?'L':'M')+x(i)+' '+y(p[s.k])).join(' ')+
+       '" fill="none" stroke="'+s.c+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+    pts.forEach((p,i)=>{g+='<circle cx="'+x(i)+'" cy="'+y(p[s.k])+'" r="3.4" fill="'+s.c+
+      '" stroke="var(--surface)" stroke-width="2"><title>'+esc(p.m)+' · '+esc(s.l)+': '+fmt(p[s.k])+'</title></circle>';});
+  });
+  const last=pts[pts.length-1];
+  const lab=vis.map(s=>({c:s.c,v:last[s.k],y:y(last[s.k])})).sort((a,b)=>a.y-b.y);
+  for(let i=1;i<lab.length;i++) if(lab[i].y-lab[i-1].y<14) lab[i].y=lab[i-1].y+14;
+  lab.forEach(l=>{g+='<text x="'+(x(pts.length-1)+11)+'" y="'+(l.y+4)+'" fill="'+l.c+
+    '" font-size="11.5" font-weight="500">'+fmt(l.v)+'</text>';});
+  g+='</svg>';
+  const leg=S.map(s=>'<div class="legend-i'+(hidden[s.k]?' off':'')+'" onclick="tog(\''+s.k+'\')">'+
+    '<i style="background:'+s.c+'"></i>'+esc(s.l)+'</div>').join('');
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:14px;'+
+    'flex-wrap:wrap;margin-bottom:14px"><div class="p-title" style="margin:0">Usage trends · '+
+    esc(MONTHS[0].toUpperCase())+' – '+esc(MONTHS[MONTHS.length-1].toUpperCase())+
+    '<span class="p-note">click a legend item to show or hide a line</span></div>'+
+    '<div class="legend">'+leg+'</div></div><div style="overflow-x:auto">'+g+'</div>';
+}
+function tog(k){ hidden[k]=!hidden[k]; render(); }
+
+function depts(md){
+  const tot=DATA.meta.deptTotals||{}, by={};
+  Object.keys(tot).forEach(d=>by[d]={total:tot[d],active:0});
+  md.members.forEach(m=>{ by[m.dept]=by[m.dept]||{total:0,active:0};
+    if(m.daysActive>0) by[m.dept].active++; });
+  const rows=Object.entries(by).sort((a,b)=>b[1].total-a[1].total).map(([d,v])=>{
+    const p=v.total?v.active/v.total:0;
+    return '<div class="bar click'+(deptFilter===d?' on':'')+'" onclick="setDept('+
+      JSON.stringify(d).replace(/"/g,'&quot;')+')"><div class="bar-l">'+esc(d)+'</div>'+
+      '<div class="bar-t"><div class="bar-f" style="width:'+(p*100)+'%;background:'+
+      (DCOL[d]||'var(--faint)')+'"></div></div>'+
+      '<div class="bar-v">'+v.active+'/'+v.total+' ('+Math.round(p*100)+'%)</div></div>';
+  }).join('');
+  return '<div class="p-title">Adoption by department<span class="p-note">click to filter the table below</span></div>'+
+    '<div class="bars">'+rows+'</div>';
+}
+function setDept(d){ deptFilter=(deptFilter===d?'all':d); render(); }
+function setBand(k){ bandFilter=(bandFilter===k?null:k); render(); }
+
+function usageSplit(md){
+  const days=md.days, b={active:[],min:[],none:[]};
+  md.members.forEach(m=>b[statusOf(m,days).k].push(m));
+  const t=md.members.length;
+  const row=(k,l,c,list)=>'<div class="bar bar-c'+(bandFilter===k?' on':'')+
+    '" onclick="setBand(\''+k+'\')" title="Click to list these people in the table below">'+
+    '<div class="bar-l">'+l+'</div><div class="bar-t">'+
+    '<div class="bar-f" style="width:'+(t?list.length/t*100:0)+'%;background:'+c+'"></div></div>'+
+    '<div class="bar-v">'+list.length+' of '+t+'</div></div>';
+  const names=(bandFilter&&b[bandFilter]?b[bandFilter]:b.none).map(m=>m.name).sort();
+  const lbl={active:'Active',min:'Minimal',none:'No usage'}[bandFilter||'none'];
+  return '<div class="p-title">Who is actually using it'+
+    '<span class="p-note">click a band to list those people · counts any day with activity '+
+    'anywhere in Claude — chat, Cowork or Claude Code — not per product</span></div>'+
+    '<div class="bars">'+row('active','Active (used it on 40%+ of days)','var(--ok)',b.active)+
+    row('min','Minimal (used it, but on under 40% of days)','var(--warn)',b.min)+
+    row('none','No usage at all','var(--bad)',b.none)+'</div>'+
+    (names.length?'<div class="note"><b>'+esc(lbl)+' in '+esc(currentMonth)+' ('+names.length+'):</b> '+
+      esc(names.join(', '))+'.</div>':'');
+}
+
+function modelPanel(){
+  const M=DATA.modelSpend, names=['Fable','Opus','Sonnet','Haiku'];
+  const col={Fable:'var(--chat)',Opus:'var(--spend)',Sonnet:'var(--code)',Haiku:'var(--cowork)'};
+  const rows=M.windows.map(w=>{
+    const tot=names.reduce((a,n)=>a+(w.by[n]||0),0)||1;
+    const segs=names.filter(n=>w.by[n]>0).map(n=>
+      '<div style="width:'+(w.by[n]/tot*100)+'%;background:'+col[n]+
+      ';height:100%" title="'+esc(n)+': $'+w.by[n]+'"></div>').join('');
+    const share=names.filter(n=>w.by[n]>0)
+      .map(n=>esc(n)+' '+Math.round(w.by[n]/tot*100)+'%').join(' · ');
+    return '<div style="margin-bottom:13px"><div style="display:flex;justify-content:space-between;'+
+      'font-size:.82rem;margin-bottom:5px"><span><b>'+esc(w.label)+'</b> '+
+      '<span style="color:var(--faint)">'+esc(w.sub)+(w.derived?' · derived':'')+
+      (w.approx?', approximate':'')+'</span></span>'+
+      '<span style="color:var(--muted)">$'+tot+'</span></div>'+
+      '<div style="display:flex;height:15px;border-radius:4px;overflow:hidden;gap:2px;'+
+      'background:var(--track)">'+segs+'</div>'+
+      '<div style="font-size:.74rem;color:var(--faint);margin-top:4px">'+share+'</div></div>';
+  }).join('');
+  const key=names.map(n=>'<span class="key-i"><span class="sq" style="background:'+col[n]+
+    '"></span>'+esc(n)+'</span>').join('');
+  return '<div class="panel"><div class="p-title">Which models the spend ran on'+
+    '<span class="p-note">US dollars · '+esc(M.source.split(', ')[1])+'</span></div>'+
+    '<div class="key" style="margin-bottom:12px">'+key+'</div>'+rows+
+    '<div class="note warnbox"><b>This is spend, not messages.</b> '+esc(M.caveat)+'</div>'+
+    '<div class="note">'+esc(M.derivedNote)+'</div></div>';
+}
+
+function board(title,sub,key,unit,col,act){
+  const top=act.filter(m=>m[key]>0).sort((a,b)=>b[key]-a[key]).slice(0,5);
+  const rows=top.length?top.map((m,i)=>
+    '<div class="lb-row"><div class="lb-i">'+(i+1)+'</div><div class="lb-n">'+esc(m.name)+
+    '<div class="lb-s">'+esc(m.title)+'</div></div>'+
+    '<div class="lb-v" style="color:'+col+'">'+fmt(m[key])+'<span class="lb-u">'+esc(unit)+'</span></div></div>').join('')
+    :'<div class="lb-empty">Nobody used this in '+esc(currentMonth.split(' ')[0])+'.</div>';
+  return '<div class="panel" style="margin:0"><div class="p-title">'+esc(title)+
+    '<span class="p-note">'+esc(sub)+'</span></div><div class="lb">'+rows+'</div></div>';
+}
+
+function table(md){
+  const depts=Object.keys(DATA.meta.deptTotals||{}).sort();
+  const sorts=[['name','Name (A–Z)'],['daysActive','Most days active'],['messages','Most Chat messages'],
+    ['coworkMessages','Most Cowork messages'],['codeSessions','Most Code sessions']];
+  return '<div class="panel"><div class="ctrls">'+
+    '<span class="ctrl-l">All members</span>'+
+    '<select class="sel sel-m" onchange="setMonth(this.value)" '+
+    'title="Switch month without losing your filters">'+
+    MONTHS.map(m=>'<option value="'+esc(m)+'"'+(currentMonth===m?' selected':'')+'>'+
+      esc(longMonth(m))+(m===MONTHS[MONTHS.length-1]?' (so far)':'')+'</option>').join('')+
+    '</select>'+
+    '<input class="q" id="q" placeholder="Search name, role or department" value="'+esc(term)+
+    '" autocomplete="off" oninput="onSearch(this.value)">'+
+    '<select class="sel" onchange="setDept(this.value)"><option value="all"'+
+    (deptFilter==='all'?' selected':'')+'>All departments</option>'+
+    depts.map(d=>'<option value="'+esc(d)+'"'+(deptFilter===d?' selected':'')+'>'+esc(d)+'</option>').join('')+
+    '</select>'+
+    '<select class="sel" onchange="setSort(this.value)">'+
+    sorts.map(([k,l])=>'<option value="'+k+'"'+(sortKey===k?' selected':'')+'>'+esc(l)+'</option>').join('')+
+    '</select>'+
+    '<div class="key"><span class="key-i"><span class="sq sq-a"></span>Active</span>'+
+    '<span class="key-i"><span class="sq sq-m"></span>Minimal</span>'+
+    '<span class="key-i"><span class="sq sq-n"></span>No usage</span></div>'+
+    '<button class="csv" onclick="csv()">Download CSV</button>'+
+    '<span class="cnt" id="cnt"></span></div>'+
+    '<div class="tw" id="tbox"><table><thead><tr><th>Name / title</th><th>Department</th>'+
+    '<th class="n">Days</th><th class="n">Chat msgs</th><th class="n">Cowork msgs</th>'+
+    '<th class="n">Code sessions</th></tr></thead>'+
+    '<tbody id="tb"></tbody></table></div></div>';
+}
+
+function rowsNow(){
+  const md=DATA.months[currentMonth];
+  let r=md.members.slice();
+  if(deptFilter!=='all') r=r.filter(m=>m.dept===deptFilter);
+  if(bandFilter) r=r.filter(m=>statusOf(m,md.days).k===bandFilter);
+  const t=term.trim().toLowerCase();
+  if(t) r=r.filter(m=>m.name.toLowerCase().includes(t)||
+    (m.title||'').toLowerCase().includes(t)||(m.dept||'').toLowerCase().includes(t));
+  r.sort((a,b)=>sortKey==='name'?a.name.localeCompare(b.name):(b[sortKey]||0)-(a[sortKey]||0));
+  return {r,md};
+}
+function paintRows(){
+  const tb=document.getElementById('tb'); if(!tb) return;
+  const {r,md}=rowsNow(), days=md.days;
+  tb.innerHTML = r.length ? r.map(m=>{
+    const st=statusOf(m,days), col=DCOL[m.dept]||'var(--faint)';
+    const n=(v,c)=>'<td class="n '+(v?c:'z')+'">'+(v?fmt(v):'—')+'</td>';
+    return '<tr class="'+(st.k==='none'?'none':'')+'">'+
+      '<td><div class="nm"><span class="nm-d" style="background:'+st.c+'" title="'+st.label+'"></span>'+
+      '<div><div class="nm-t">'+esc(m.name)+'</div><div class="nm-s">'+esc(m.title)+'</div></div></div></td>'+
+      '<td><span class="chip" style="color:'+col+'">'+esc(m.dept)+'</span></td>'+
+      '<td class="days">'+m.daysActive+' / '+days+'</td>'+
+      n(m.messages,'chat')+n(m.coworkMessages,'cowork')+n(m.codeSessions,'code')+
+      '</tr>';
+  }).join('') : '<tr><td colspan="7" class="nodata">Nobody matches that.</td></tr>';
+  const c=document.getElementById('cnt');
+  if(c) c.textContent=r.length+' of '+md.members.length+' members';
+  /* lock height so filtering never shifts the page under the cursor */
+  const box=document.getElementById('tbox');
+  if(box && deptFilter==='all' && !term.trim()){
+    box.style.minHeight='0px'; box.style.minHeight=box.offsetHeight+'px';
+  }
+}
+function onSearch(v){ term=v; paintRows(); }
+function setSort(k){ sortKey=k; paintRows(); }
+
+function csv(){
+  const {r,md}=rowsNow(); if(!r.length) return;
+  const out=r.map(m=>({Name:m.name,Title:m.title,Department:m.dept,
+    Status:statusOf(m,md.days).label,'Days active':m.daysActive,'Days in period':md.days,
+    'Chat messages':m.messages,'Cowork messages':m.coworkMessages,
+    'Code sessions':m.codeSessions}));
+  const h=Object.keys(out[0]);
+  const body=[h.join(',')].concat(out.map(x=>h.map(k=>{
+    const v=String(x[k]); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(','))).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([body],{type:'text/csv'}));
+  a.download='TZ_Claude_'+currentMonth.replace(' ','_')+'.csv'; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ═══ VIEW 2 · USAGE DETAIL ═════════════════════════════ */
+function vUsage(){
+  const s=DATA.snapshot;
+  let h=windowNote();
+  h+='<div class="cards">'+
+    card('Conversations',fmt(s.outputs.conversations),'Chat and Cowork threads started','chat')+
+    card('File operations',fmt(s.outputs.fileOperations),'Files created or edited by Claude','cowork')+
+    card('Pull requests',fmt(s.outputs.prsCreated),'Raised with Claude Code','code')+
+    card('MCP writes',fmt(s.outputs.mcpWrites),'Actions written back to connected tools','')+
+
+    card('Est. time saved','~'+fmt(s.timeSaved.hours)+' hrs',"Anthropic's model, assumptions below",'spend')+
+    '</div>';
+  h+='<div class="panel"><div class="p-title">How the time saved figure is built'+
+    '<span class="p-note">Anthropic\'s default assumptions, editable in the Claude admin console</span></div>'+
+    '<div class="tw"><table><thead><tr><th>Verified output</th><th class="n">Minutes saved each</th>'+
+    '<th class="n">Hours</th></tr></thead><tbody>'+
+    s.timeSaved.assumptions.map(a=>{
+      const c=parseInt(String(a.output).replace(/[^0-9]/g,''),10)||0;
+      return '<tr><td>'+esc(a.output)+'</td><td class="n">'+a.minutesEach+'</td>'+
+        '<td class="n">'+(c*a.minutesEach/60).toFixed(1)+'</td></tr>';}).join('')+
+    '</tbody></table></div><div class="note">The 150 minutes per pull request assumption does most of '+
+    'the work here. Treat the headline as an order of magnitude, not a precise figure.</div></div>';
+  h+='<div class="g2">'+depth(s)+sticky(s)+'</div>';
+  h+='<div class="panel">'+fileCats(s)+'</div>';
+  h+='<div class="g2">'+skills(s)+connectors(s)+'</div>';
+  h+=agenticPanel(s);
+  h+=projects(s);
+  h+=historyPanel();
+  h+=codePanel(s);
+  return h;
+}
+function depth(s){
+  const a=s.adoptionLevel, seats=DATA.meta.members;
+  const rows=[['Have a seat',a.allMembers,'var(--chat)'],['Active this month',a.monthly,'var(--chat)'],
+    ['Active this week',a.weekly,'var(--chat)'],['Active yesterday',a.daily,'var(--amber)']]
+    .map(([l,v,c])=>'<div class="bar"><div class="bar-l">'+l+'</div><div class="bar-t">'+
+      '<div class="bar-f" style="width:'+(v/seats*100)+'%;background:'+c+'"></div></div>'+
+      '<div class="bar-v">'+v+' ('+Math.round(v/seats*100)+'%)</div></div>').join('');
+  return '<div class="panel" style="margin:0"><div class="p-title">Depth of adoption'+
+    '<span class="p-note">of the '+seats+' current members · rolling 30 days to '+niceDate(s.dataAsOf)+'</span></div><div class="bars">'+rows+'</div>'+
+    '<div class="note">Breadth is strong and depth is thin. Nearly everyone has used Claude at some '+
+    'point this month, but only <b>'+a.daily+'</b> used it yesterday. Daily use is the number to move.</div></div>';
+}
+function sticky(s){
+  const rows=s.stickiness.map((p,i)=>'<div class="bar"><div class="bar-l">'+esc(p.product)+'</div>'+
+    '<div class="bar-t"><div class="bar-f" style="width:'+Math.min(100,p.dauMau/0.25*100)+
+    '%;background:'+CAT[i]+'"></div></div><div class="bar-v">'+pc(p.dauMau)+'</div></div>').join('');
+  return '<div class="panel" style="margin:0"><div class="p-title">Product stickiness'+
+    '<span class="p-note">daily actives as a share of monthly actives</span></div>'+
+    '<div class="bars">'+rows+'</div><div class="note">A higher share means people return day after day '+
+    'rather than dipping in occasionally. Cowork is the stickiest at '+pc(s.stickiness[0].dauMau)+
+    '. Office Agents is provisioned but unused.</div></div>';
+}
+function fileCats(s){
+  const f=s.fileCategories;
+  return '<div class="p-title">What Claude is actually working on<span class="p-note">'+
+    fmt(f.total)+' file operations in Cowork, by file type</span></div><div class="stack">'+
+    f.categories.map((c,i)=>'<i style="width:'+(c.share*100)+'%;background:'+CAT[i%CAT.length]+
+      '" title="'+esc(c.category)+': '+fmt(c.count)+'"></i>').join('')+'</div><div class="slegend">'+
+    f.categories.map((c,i)=>'<span><span class="dot" style="background:'+CAT[i%CAT.length]+'"></span>'+
+      esc(c.category)+' · '+fmt(c.count)+' ('+(c.share*100).toFixed(1)+'%)</span>').join('')+'</div>';
+}
+function skills(s){
+  const tz=s.skills.filter(k=>k.builtBy==='TransitionZero').length;
+  return '<div class="panel" style="margin:0"><div class="p-title">Skills in use'+
+    '<span class="p-note">packaged instructions people invoke by name</span></div>'+
+    '<div class="tw"><table><thead><tr><th>Skill</th><th class="n">Uses</th><th class="n">Cost each</th>'+
+    '</tr></thead><tbody>'+s.skills.map(k=>'<tr><td>'+esc(k.skill)+
+      (k.builtBy==='TransitionZero'?' <span class="tag">TZ built</span>':'')+'</td>'+
+      '<td class="n">'+fmt(k.uses)+'</td><td class="n'+(k.costPerUse?'':' z')+'">'+
+      (k.costPerUse?'$'+k.costPerUse.toFixed(2):'—')+'</td></tr>').join('')+
+    '</tbody></table></div><div class="note"><b>'+tz+' of the top five are ours.</b> Skills we build '+
+    'get used, which is the cheapest lever we have for raising adoption.</div></div>';
+}
+function connectors(s){
+  const g=s.connectors.find(c=>c.connector==='Granola');
+  return '<div class="panel" style="margin:0"><div class="p-title">Connectors'+
+    '<span class="p-note">tools Claude reads from and writes back to</span></div>'+
+    '<div class="tw"><table><thead><tr><th>Connector</th><th class="n">Users</th><th class="n">Reads</th>'+
+    '<th class="n">Writes</th></tr></thead><tbody>'+s.connectors.map(c=>'<tr><td>'+esc(c.connector)+
+      '</td><td class="n">'+c.users+'</td><td class="n">'+fmt(c.reads)+'</td>'+
+      '<td class="n'+(c.writes?'':' z')+'">'+(c.writes?fmt(c.writes):'—')+'</td></tr>').join('')+
+    '</tbody></table></div><div class="note">Reads far exceed writes everywhere. Granola has '+
+    fmt(g?g.reads:0)+' reads and no writes at all, so meeting notes are being read but nothing goes '+
+    'back. That gap is where automation would pay.</div></div>';
+}
+function projects(s){
+  const pm=s.projectsMeta, all=s.projectsAll;
+  const bars=pm.createdByMonth.map(([m,n])=>{
+    const mx=Math.max(...pm.createdByMonth.map(x=>x[1]));
+    return '<div class="bar"><div class="bar-l" style="width:44px">'+esc(m)+'</div>'+
+      '<div class="bar-t"><div class="bar-f" style="width:'+(n/mx*100)+
+      '%;background:var(--chat)"></div></div><div class="bar-v" style="width:32px">'+n+'</div></div>';
+  }).join('');
+  return '<div class="panel"><div class="p-title">Projects'+
+    '<span class="p-note">all '+pm.totalProjects+', from '+esc(pm.source.split(', ')[1])+'</span></div>'+
+    '<div class="cards" style="margin-bottom:14px">'+
+      card('Projects in total',pm.totalProjects,'Created since March, by '+pm.distinctCreators+' different people','chat')+
+      card('Shared with someone',pm.sharedProjects,'The other '+(pm.totalProjects-pm.sharedProjects)+' have a single user','cowork')+
+      card('Used once and dropped',pm.singleConversation,'Only one conversation ever started in them','')+
+    '</div>'+
+    '<div class="p-title" style="margin-top:4px">Projects created each month</div>'+
+    '<div class="bars" style="margin-bottom:14px">'+bars+'</div>'+
+    '<div class="tw" style="max-height:340px;overflow:auto"><table><thead><tr><th>Project</th>'+
+    '<th class="n">Users</th><th class="n">Threads</th><th class="n">Messages</th>'+
+    '<th>Created</th><th>Created by</th></tr></thead><tbody>'+
+    all.map(p=>'<tr><td>'+esc(p.project)+'</td>'+
+      '<td class="n'+(p.users>1?' cowork':'')+'">'+p.users+'</td>'+
+      '<td class="n">'+p.conversations+'</td><td class="n">'+fmt(p.messages)+'</td>'+
+      '<td>'+esc(p.created)+'</td><td>'+esc(nameOf(p.createdBy))+'</td></tr>').join('')+
+    '</tbody></table></div>'+
+    '<div class="note"><b>'+pm.totalProjects+' projects exist</b>, holding '+fmt(pm.totalMessages)+
+    ' messages between them. The headline "'+pm.createdInWindow+' projects created" on Claude\'s own '+
+    'analytics counts only the last 30 days, which is why it looks so much smaller.</div>'+
+    '<div class="note"><b>Only '+pm.sharedProjects+' of '+pm.totalProjects+' have more than one user.</b> '+
+    esc(pm.sharedMeaning)+' '+pm.singleConversation+' projects were used for a single conversation and '+
+    'never returned to, which suggests people create them as a filing habit rather than a place work '+
+    'accumulates.</div>'+
+    '<div class="note warnbox"><b>This counts Chat projects only.</b> '+esc(pm.coworkNote)+'</div></div>';
+}
+
+function historyPanel(){
+  const H=DATA.history||[];
+  const rows=[
+    ['Actions per prompt', c=>c.actionsPerPrompt.toFixed(1)],
+    ['Active this month',  c=>c.adoptionLevel.monthly],
+    ['Active yesterday',   c=>c.adoptionLevel.daily],
+    ['Conversations',      c=>fmt(c.outputs.conversations)],
+    ['Pull requests',      c=>fmt(c.outputs.prsCreated)],
+    ['Projects in total',  c=>c.projectsTotal],
+    ['Projects shared',    c=>c.projectsShared],
+    ['Metered spend',      c=>'\u00a3'+c.meteredTotalGBP.toFixed(2)],
+    ['People billed',      c=>c.meteredUsersBilled],
+  ];
+  const head='<tr><th>Measure</th>'+H.map(c=>'<th class="n">'+esc(niceDate(c.capturedAt))+'</th>').join('')+'</tr>';
+  const body=rows.map(([l,f])=>'<tr><td>'+esc(l)+'</td>'+
+    H.map(c=>'<td class="n">'+f(c)+'</td>').join('')+'</tr>').join('');
+  const one = H.length<2;
+  return '<div class="panel"><div class="p-title">Snapshot history'+
+    '<span class="p-note">'+H.length+' capture'+(H.length===1?'':'s')+' kept</span></div>'+
+    '<div class="note" style="margin-top:0">The figures on this page come from panels that only '+
+    'ever show a rolling 30 days, and per-person spend resets every billing period. Neither can be '+
+    'recovered for a month that has passed. Each monthly refresh therefore stores a copy here, and '+
+    'this table grows into a real trend.</div>'+
+    '<div class="tw"><table><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'+
+    (one?'<div class="note warnbox"><b>History starts here.</b> This is the first capture, so there '+
+      'is nothing to compare against yet. A second column appears at the next monthly refresh and a '+
+      'usable trend after three or four. Nothing in this table is back-filled or estimated — each '+
+      'column is what Claude actually reported on that date.</div>':'')+
+    '</div>';
+}
+
+function agenticPanel(s){
+  const a=s.agentic.actionsPerPrompt;
+  return '<div class="panel"><div class="p-title">How agentic the usage is'+
+    '<span class="p-note">rolling 30 days to '+niceDate(s.dataAsOf)+'</span></div>'+
+    '<div class="k-num cowork" style="font-size:3rem;line-height:1.1">'+a.toFixed(1)+'</div>'+
+    '<div style="font-size:.82rem;color:var(--muted);margin-top:2px">'+
+    'actions Claude takes per instruction given</div>'+
+    '<div class="note">Every prompt someone writes currently produces <b>'+a.toFixed(1)+'</b> steps '+
+    '— reading a file, running a search, making an edit, calling a connected tool. Near 1 would mean '+
+    'people are using Claude as a question-and-answer box. Above about 4 means they are handing over '+
+    'whole tasks and Claude is working through them. This is the one figure here that describes '+
+    '<i>how</i> Claude is used rather than how much.</div>'+
+    '<div class="note">It is an average across a small organisation, so one heavy Cowork or Claude '+
+    'Code user moves it. Treat a change of a few tenths as noise.</div></div>';
+}
+
+function codePanel(s){
+  const c=s.claudeCode;
+  return '<div class="panel"><div class="p-title">Claude Code</div><div class="cards" style="margin-bottom:0">'+
+    card('Suggestion accept rate',(c.suggestionAcceptRate*100).toFixed(1)+'%','Share of suggestions engineers kept','code')+
+    card('Lines of code accepted',fmt(c.linesOfCodeAccepted),'Merged into the codebase','code')+
+    card('Actions per prompt',s.agentic.actionsPerPrompt,'Work delegated per instruction','chat')+
+    '</div>'+(c.perUserAvailable?'':'<div class="note"><b>Per-engineer detail is not available yet.</b> '+
+    esc(c.blockedReason)+'</div>')+'</div>';
+}
+
+/* ═══ VIEW 3 · COST ═════════════════════════════════════
+   Built around the questions a reader actually has, not
+   accounting terms. Seats and usage are two different
+   charges in two different currencies and are never added. */
+function vCost(){
+  const c=DATA.snapshot.cost;
+  const gbp=n=>'£'+Number(n).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const usd=n=>'$'+Math.round(Number(n)).toLocaleString('en-GB');
+
+  let h='<div class="wnote"><b>'+esc(c.reportedMonth)+'</b><span class="sep">·</span>'+
+    'Invoices from the Claude billing page<span class="sep">·</span>'+
+    'Usage from the analytics API</div>';
+
+  h+='<div class="panel"><div class="p-title">How Claude is charged</div>'+
+     '<div style="font-size:.92rem;line-height:1.7;max-width:62ch">'+esc(c.explainer)+'</div></div>';
+
+  /* the two charges, kept visually apart */
+  h+='<div class="g2">'+
+    '<div class="panel" style="margin:0"><div class="p-title">1 · The monthly bill</div>'+
+      '<div class="k-num" style="font-size:2.4rem">'+gbp(c.subscription.amount)+'</div>'+
+      '<div class="k-sub" style="margin-top:12px">'+c.subscription.members+' seats, invoiced '+
+      esc(c.subscription.invoiceDate)+'. '+esc(c.subscription.note)+'</div></div>'+
+    '<div class="panel" style="margin:0"><div class="p-title">2 · Usage on top</div>'+
+      '<div class="k-num spend" style="font-size:2.4rem">'+usd(c.usage.amount)+'</div>'+
+      '<div class="k-sub" style="margin-top:12px">'+esc(c.usage.note)+
+      ' Reported in US dollars by Anthropic, so it is not added to the figure on the left.</div></div>'+
+    '</div>';
+
+  h+='<div class="g2">'+
+    '<div class="panel" style="margin:0"><div class="p-title">Prepaid credit balance</div>'+
+      '<div class="k-num" style="font-size:2rem">'+gbp(c.credits.balance)+'</div>'+
+      '<div class="k-sub" style="margin-top:12px">'+esc(c.credits.note)+' '+
+      esc(c.credits.autoReload)+'.</div></div>'+
+    '<div class="panel" style="margin:0"><div class="p-title">Next bill</div>'+
+      '<div class="k-num" style="font-size:2rem">'+gbp(c.nextInvoice.projected)+'</div>'+
+      '<div class="k-sub" style="margin-top:12px">Due '+esc(c.nextInvoice.date)+', for '+
+      c.nextInvoice.seats+' seats with '+c.nextInvoice.seatsAvailable+' unused. '+
+      'Lower than July despite more seats, which is worth understanding before reading a trend into it.'+
+      '</div></div></div>';
+
+  /* what the usage went on, this month */
+  const jul=c.usageByMonth.find(m=>m.month==='Jul');
+  const parts=[['Claude Code',jul.code,'var(--code)'],['Chat',jul.chat,'var(--chat)'],
+               ['Cowork',jul.cowork,'var(--cowork)'],['Other',jul.other,'var(--faint)']]
+              .filter(p=>p[1]>0).sort((a,b)=>b[1]-a[1]);
+  const mx=Math.max(...parts.map(p=>p[1]));
+  h+='<div class="panel"><div class="p-title">What the usage went on'+
+    '<span class="p-note">July, in US dollars</span></div><div class="bars">'+
+    parts.map(([l,v,col])=>'<div class="bar"><div class="bar-l">'+l+'</div><div class="bar-t">'+
+      '<div class="bar-f" style="width:'+(v/mx*100)+'%;background:'+col+'"></div></div>'+
+      '<div class="bar-v">'+usd(v)+'</div></div>').join('')+'</div></div>';
+
+  /* month by month, stacked, actuals only */
+  h+='<div class="panel"><div class="p-title">Usage month by month'+
+    '<span class="p-note">actual figures, no forecasting. Excludes the seat bill.</span></div>'+
+    usageChart(c.usageByMonth)+
+    '<div class="slegend">'+
+    [['Claude Code','var(--code)'],['Cowork','var(--cowork)'],['Chat','var(--chat)'],
+     ['Other','var(--faint)']].map(([l,col])=>
+      '<span><span class="dot" style="background:'+col+'"></span>'+l+'</span>').join('')+
+    '</div></div>';
+
+  /* plain-language watch list */
+  h+='<div class="panel"><div class="p-title">What to watch</div>'+
+    c.watch.map(w=>'<div class="note" style="margin-top:0;margin-bottom:11px">'+
+      '<b>'+esc(w.title)+'.</b> '+esc(w.body)+'</div>').join('')+'</div>';
+
+  /* who the metered spend actually goes to — billed amounts, not estimates */
+  const mt=c.metered, share=v=>Math.round(v/mt.total*100);
+  h+='<div class="panel"><div class="p-title">Who the metered usage goes to'+
+    '<span class="p-note">actual billed amounts · '+esc(mt.period)+' · resets '+esc(mt.resets)+'</span></div>'+
+    '<div class="note" style="margin-top:0">These are the amounts Claude has billed, taken from the '+
+    'usage page, not an estimate. <b>'+mt.usersBilled+' of '+mt.usersTotal+'</b> people have any '+
+    'metered usage at all; the other '+(mt.usersTotal-mt.usersBilled)+' are fully covered by their seat.</div>'+
+    '<div class="lb">'+mt.top.map((m,i)=>
+      '<div class="lb-row"><div class="lb-i">'+(i+1)+'</div><div class="lb-n">'+esc(m.name)+
+      '<div class="lb-s">'+esc(m.title)+' · '+esc(m.email)+'</div></div>'+
+      '<div class="lb-v" style="color:var(--spend)">'+gbp(m.spend)+
+      '<span class="lb-u">'+share(m.spend)+'% of total</span></div></div>').join('')+'</div>'+
+    '<div class="note"><b>'+gbp(mt.total)+'</b> in total across '+mt.usersTotal+' people ('+
+    mt.standardSeats+' standard seats, '+mt.premiumSeats+' premium).</div></div>';
+  return h;
+}
+
+/* stacked monthly bars — actuals, partial months hatched */
+function usageChart(rows){
+  const W=1200,H=260,PL=58,PR=20,PT=18,PB=44,iw=W-PL-PR,ih=H-PT-PB;
+  const max=Math.max(1,...rows.map(r=>r.total));
+  const bw=Math.min(88, iw/rows.length*0.54);
+  const seg=[['code','var(--code)'],['cowork','var(--cowork)'],
+             ['chat','var(--chat)'],['other','var(--faint)']];
+  let g='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:260px" role="img" '+
+        'aria-label="Metered usage by month">';
+  for(let i=0;i<=4;i++){const gy=PT+ih-(i/4)*ih;
+    g+='<line x1="'+PL+'" y1="'+gy+'" x2="'+(W-PR)+'" y2="'+gy+'" stroke="var(--line)"/>'+
+       '<text x="'+(PL-11)+'" y="'+(gy+4)+'" fill="var(--faint)" font-size="11" text-anchor="end">$'+
+       Math.round(max*i/4)+'</text>';}
+  rows.forEach((r,i)=>{
+    const cx=PL+(i+0.5)*iw/rows.length;
+    let y=PT+ih;
+    seg.forEach(([k,col])=>{
+      const v=r[k]||0; if(!v) return;
+      const bh=(v/max)*ih; y-=bh;
+      g+='<rect x="'+(cx-bw/2)+'" y="'+y+'" width="'+bw+'" height="'+bh+'" fill="'+col+
+         '" opacity="'+(r.partial?0.55:1)+'"><title>'+esc(r.month)+' · '+k+': $'+v+'</title></rect>';
+    });
+    g+='<text x="'+cx+'" y="'+(PT+ih-(r.total/max)*ih-8)+'" fill="var(--ink)" font-size="11.5" '+
+       'font-weight="500" text-anchor="middle">$'+r.total+'</text>';
+    g+='<text x="'+cx+'" y="'+(H-24)+'" fill="var(--faint)" font-size="11" text-anchor="middle">'+
+       esc(r.month)+'</text>';
+    if(r.partial) g+='<text x="'+cx+'" y="'+(H-9)+'" fill="var(--faint)" font-size="9.5" '+
+       'text-anchor="middle">to '+esc(r.upTo.split(' ')[0])+'</text>';
+  });
+  g+='</svg>';
+  return '<div style="overflow-x:auto">'+g+'</div>';
+}
+</script>
+</body>
+</html>
