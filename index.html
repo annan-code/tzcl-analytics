@@ -115,6 +115,14 @@ h1{font-size:2.35rem;font-weight:700;letter-spacing:-.03em;line-height:1}
 
 /* ── bars ──────────────────────────────────────────────── */
 .bars{display:grid;gap:11px}
+.howto{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 15px;margin-bottom:14px}
+.howto summary{cursor:pointer;font-size:.85rem;font-weight:500;letter-spacing:.01em}
+.howto summary::marker{color:var(--faint)}
+.howto-b{font-size:.85rem;line-height:1.65;color:var(--muted);max-width:82ch;margin-top:9px}
+.howto-b p{margin:0 0 8px}
+.howto-b ul{margin:0 0 8px;padding-left:18px}
+.howto-b li{margin-bottom:4px}
+.howto-b b{color:var(--ink)}
 .note.warnbox{border-left:3px solid var(--warn);padding-left:11px}
 .bar{display:flex;align-items:center;gap:14px}
 .bar.click,.bar-c{cursor:pointer;border-radius:4px;padding:2px 4px;margin:-2px -4px}
@@ -269,7 +277,7 @@ pwEl.focus();
 
 /* ═══ state ═════════════════════════════════════════════ */
 let DATA=null, MONTHS=[], currentMonth=null, view='monthly';
-let deptFilter='all', bandFilter=null, sortKey='name', term='', hidden={};
+let deptFilter='all', bandFilter=null, sortKey='name', term='', hidden={}, helpOpen=false;
 
 const DCOL={'Technology':'var(--d-tech)','Operations':'var(--d-ops)',
   'Solutions Engineering':'var(--d-sol)','Product':'var(--d-prod)',
@@ -298,7 +306,7 @@ function boot(){
   currentMonth=MONTHS[MONTHS.length-1];
   document.getElementById('org').textContent =
     DATA.meta.org+' · '+DATA.meta.seatsPurchased+' seats · '+
-    DATA.meta.seatsInUse+' in use · '+DATA.meta.seatsUnused+' unused';
+    DATA.meta.seatsInUse+' in use · '+DATA.meta.seatsUnused+' unused · updated monthly';
   paintPills(); render();
 }
 function paintPills(){
@@ -329,6 +337,32 @@ function render(){
     'Monthly figures: '+esc(DATA.meta.monthlySource)+'.<br>'+
     'Usage detail and cost: '+esc(DATA.snapshot.source)+', fetched '+
     esc(niceDate(DATA.snapshot.fetchedAt.slice(0,10)))+'.';
+}
+
+function howTo(){
+  return '<details class="howto"'+(helpOpen?' open':'')+' ontoggle="helpOpen=this.open">'+
+    '<summary>How to use this dashboard</summary>'+
+    '<div class="howto-b">'+
+    '<p><b>It is updated once a month</b> and the web address never changes, so you can '+
+    'bookmark it and come back. Each refresh adds the month that has just finished.</p>'+
+    '<p><b>Pick a month</b> using the buttons at the top. The one marked NOW is the month '+
+    'we are currently in, so it is incomplete and its numbers will look low.</p>'+
+    '<p><b>The three tabs:</b></p>'+
+    '<ul>'+
+    '<li><b>Monthly adoption</b> — who used Claude in the month you have selected, in which '+
+    'department, and how much.</li>'+
+    '<li><b>Usage detail</b> — what people are doing with it: projects, skills, connectors, '+
+    'file types, Claude Code. This one always covers the last 30 days rather than a calendar '+
+    'month, because that is the only window Claude reports it over.</li>'+
+    '<li><b>Cost</b> — what Claude costs and where the money goes.</li>'+
+    '</ul>'+
+    '<p><b>Things you can click:</b> a department bar, or one of the Active / Minimal / No '+
+    'usage bands, filters the table of people underneath it. Click it again to clear. You can '+
+    'also search the table by name, role or department, sort it, and download it as a '+
+    'spreadsheet with the Download CSV button.</p>'+
+    '<p><b>Dark mode</b> is the button at the top right.</p>'+
+    '<p>Any question about a number — where it comes from or what it counts — ask Anna.</p>'+
+    '</div></details>';
 }
 
 function windowNote(){
@@ -363,6 +397,7 @@ function vMonthly(){
     '<i class="'+(i<act.length?'':'off')+'"></i>').join('')+'</div>';
 
   let h=windowNote();
+  h+=howTo();
   h+='<div class="panel">'+trend()+'</div>';
   h+='<div class="cards">'+
     card('Active users',act.length+' <span class="of">/ '+seats+'</span>',
