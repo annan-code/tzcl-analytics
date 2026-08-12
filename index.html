@@ -115,6 +115,8 @@ h1{font-size:2.35rem;font-weight:700;letter-spacing:-.03em;line-height:1}
 
 /* ── bars ──────────────────────────────────────────────── */
 .bars{display:grid;gap:11px}
+.ctrl-m{display:block;font-weight:500;color:var(--ink);font-size:.9rem;margin-top:1px}
+.sel-m{font-weight:500}
 .howto{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 15px;margin-bottom:14px}
 .howto summary{cursor:pointer;font-size:.85rem;font-weight:500;letter-spacing:.01em}
 .howto summary::marker{color:var(--faint)}
@@ -314,7 +316,17 @@ function paintPills(){
     '<button class="pill'+(m===currentMonth?' on':'')+'" onclick="setMonth(\''+m+'\')">'+esc(m)+
     (i===MONTHS.length-1?'<span class="now">now</span>':'')+'</button>').join('');
 }
-function setMonth(m){ currentMonth=m; deptFilter='all'; bandFilter=null; term=''; paintPills(); render(); }
+function longMonth(m){ const p=m.split(' '); return (MONL[p[0]]||p[0])+' '+p[1]; }
+function setMonth(m,keep){
+  currentMonth=m;
+  // Switching from the pills at the top starts fresh. Switching from the control row
+  // above the table keeps the filters and the scroll position, because there the point
+  // is almost always to compare the same slice of people across two months.
+  if(!keep){ deptFilter='all'; bandFilter=null; term=''; }
+  const y=keep?window.scrollY:0;
+  paintPills(); render();
+  if(keep) window.scrollTo(0,y);
+}
 function setView(v){
   view=v;
   ['monthly','usage','cost'].forEach(k=>document.getElementById('v-'+k).classList.toggle('on',k===v));
@@ -546,7 +558,12 @@ function table(md){
   const sorts=[['name','Name (A–Z)'],['daysActive','Most days active'],['messages','Most Chat messages'],
     ['coworkMessages','Most Cowork messages'],['codeSessions','Most Code sessions']];
   return '<div class="panel"><div class="ctrls">'+
-    '<span class="ctrl-l">All members</span>'+
+    '<span class="ctrl-l">All members<b class="ctrl-m">'+esc(longMonth(currentMonth))+'</b></span>'+
+    '<select class="sel sel-m" onchange="setMonth(this.value,true)" '+
+    'title="Switch month without losing your filters">'+
+    MONTHS.map(m=>'<option value="'+esc(m)+'"'+(currentMonth===m?' selected':'')+'>'+
+      esc(longMonth(m))+(m===MONTHS[MONTHS.length-1]?' (so far)':'')+'</option>').join('')+
+    '</select>'+
     '<input class="q" id="q" placeholder="Search name, role or department" value="'+esc(term)+
     '" autocomplete="off" oninput="onSearch(this.value)">'+
     '<select class="sel" onchange="setDept(this.value)"><option value="all"'+
