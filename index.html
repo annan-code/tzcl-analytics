@@ -115,6 +115,8 @@ h1{font-size:2.35rem;font-weight:700;letter-spacing:-.03em;line-height:1}
 
 /* ── bars ──────────────────────────────────────────────── */
 .bars{display:grid;gap:11px}
+.th-s{font-weight:400;opacity:.65;font-size:.68rem}
+.unranked{color:var(--warn);margin-left:2px;font-weight:600}
 .sel-m{font-weight:500}
 .howto{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 15px;margin-bottom:14px}
 .howto summary{cursor:pointer;font-size:.85rem;font-weight:500;letter-spacing:.01em}
@@ -302,6 +304,8 @@ function statusOf(m,days){
   return {k:'min',label:'Minimal',c:'var(--warn)'};
 }
 
+const ALLTIME='All time';
+function isAll(){ return currentMonth===ALLTIME; }
 function boot(){
   MONTHS=Object.keys(DATA.months);
   currentMonth=MONTHS[MONTHS.length-1];
@@ -313,7 +317,7 @@ function boot(){
 function paintPills(){
   document.getElementById('monthPills').innerHTML = MONTHS.map((m,i)=>
     '<button class="pill'+(m===currentMonth?' on':'')+'" onclick="setMonth(\''+m+'\')">'+esc(m)+
-    (i===MONTHS.length-1?'<span class="now">now</span>':'')+'</button>').join('');
+    (i===MONTHS.length-1?'<span class="now">now</span>':'')+'</button>').join('')+'<button class="pill'+(isAll()?' on':'')+'" onclick="setMonth(\''+ALLTIME+'\')" title="Every month together, adjusted for how long each person has had Claude">All time</button>';
 }
 function longMonth(m){ const p=m.split(' '); return (MONL[p[0]]||p[0])+' '+p[1]; }
 function setMonth(m){
@@ -354,11 +358,22 @@ function howTo(){
     '<div class="howto-b">'+
     '<p><b>It is updated once a month</b> and the web address never changes, so you can '+
     'bookmark it and come back. Each refresh adds the month that has just finished.</p>'+
-    '<p><b>Pick a month</b> using the buttons at the top. The one marked NOW is the month '+
-    'we are currently in, so it is incomplete and its numbers will look low.</p>'+
+    '<p><b>Pick a period</b> using the buttons at the top. The one marked NOW is the month '+
+    'we are currently in, so it is incomplete and its numbers will look low. Only complete '+
+    'days are counted.</p>'+
+    '<p><b>All time</b> is the last button, and it works differently on purpose. Claude was '+
+    'rolled out in waves, so people have had it for anything from a few weeks to five months. '+
+    'Adding up six months of totals would rank people by when they were given the tool. So on '+
+    'that page every figure is <b>per day of access</b>, counted from the day each person\'s '+
+    'account was created. Anyone with fewer than '+
+    ((DATA.allTime&&DATA.allTime.minDaysToRank)||30)+' days of access is shown but not ranked, '+
+    'and carries an asterisk, because a couple of weeks is too small a sample to compare '+
+    'against someone with five months.</p>'+
+    '<p><b>The monthly pages use raw numbers.</b> Within a single month almost everyone had '+
+    'the same days, so they already compare fairly.</p>'+
     '<p><b>The three tabs:</b></p>'+
     '<ul>'+
-    '<li><b>Monthly adoption</b> — who used Claude in the month you have selected, in which '+
+    '<li><b>Monthly adoption</b> — who used Claude in the period you have selected, in which '+
     'department, and how much.</li>'+
     '<li><b>Usage detail</b> — what people are doing with it: projects, skills, connectors, '+
     'file types, Claude Code. This one always covers the last 30 days rather than a calendar '+
@@ -367,10 +382,9 @@ function howTo(){
     '</ul>'+
     '<p><b>Things you can click:</b> a department bar, or one of the Active / Minimal / No '+
     'usage bands, filters the table of people underneath it. Click it again to clear. You can '+
-    'also search the table by name, role or department, sort it, and download it as a '+
-    'spreadsheet with the Download CSV button.</p>'+
+    'also search the table, sort it, switch period from the row above it, and download what '+
+    'you are looking at with the Download CSV button.</p>'+
     '<p><b>Dark mode</b> is the button at the top right.</p>'+
-    '<p>Any question about a number — where it comes from or what it counts — ask Anna.</p>'+
     '</div></details>';
 }
 
@@ -382,7 +396,8 @@ function windowNote(){
     const mn=currentMonth.split(' ');
     return '<div class="wnote"><b>'+esc((MONL[mn[0]]||mn[0])+' '+mn[1])+'</b>'+
       '<span class="sep">·</span>'+esc(p)+'<span class="sep">·</span>'+md.days+' days counted'+
-      (live?'<span class="sep">·</span><span class="live"><i></i>Month in progress</span>':'')+
+      (live?'<span class="sep">·</span><span class="live"><i></i>Month in progress, '+
+        'complete days only</span>':'')+
       '<span class="sep">·</span>Data accurate to <b>'+esc(niceDate(s.dataAsOf))+'</b></div>';
   }
   return '<div class="wnote">'+esc(view==='cost'?'Month to date · 1 – 10 August 2026 · USD':s.window)+
@@ -396,7 +411,69 @@ function card(label,val,sub,cls,extra){
 }
 
 /* ═══ VIEW 1 · MONTHLY ══════════════════════════════════ */
+function vAllTime(){
+  const A=DATA.allTime, all=A.members;
+  const used=all.filter(m=>m.daysActive>0);
+  const rankable=all.filter(m=>m.ranked);
+  const avg=rankable.reduce((a,b)=>a+b.pctDaysUsed,0)/(rankable.length||1);
+  const sum=k=>all.reduce((a,b)=>a+(b[k]||0),0);
+
+  let h=howTo();
+  h+='<div class="wnote"><b>All time</b><span class="sep">·</span>'+esc(A.period)+
+     '<span class="sep">·</span>'+A.days+' days<span class="sep">·</span>'+
+     'each person measured against their own start date</div>';
+
+  h+='<div class="note warnbox" style="margin-top:0">Claude was rolled out in waves. '+
+    'Every figure here is <b>per day of access</b>, counted from the day each person\'s '+
+    'account was created, so people who got it later compare fairly. Ranking starts at <b>'+
+    A.minDaysToRank+' days</b> of access.</div>';
+
+  h+='<div class="cards">'+
+    card('Consistency',Math.round(avg)+'%',
+      'Average share of their available days that people used Claude','chat')+
+    card('Chat messages',fmt(sum('messages')),'Across all six months','chat')+
+    card('Cowork messages',fmt(sum('coworkMessages')),'Across all six months','cowork')+
+    card('Code sessions',fmt(sum('codeSessions')),'Across all six months','code')+
+    '</div>';
+
+  /* department consistency — the fair version of the coverage bars */
+  const dp=Object.entries(A.deptPct).sort((a,b)=>b[1]-a[1]);
+  const mx=Math.max(...dp.map(x=>x[1]));
+  h+='<div class="panel"><div class="p-title">How consistently each team uses it'+
+    '<span class="p-note">average share of available days · click a bar to filter the table</span></div>'+
+    '<div class="bars">'+dp.map(([d,v])=>
+      '<div class="bar bar-c'+(deptFilter===d?' on':'')+'" onclick="setDept('+
+      JSON.stringify(d).replace(/"/g,'&quot;')+')"><div class="bar-l" style="width:200px">'+
+      '<span class="chip" style="color:'+(DCOL[d]||'var(--faint)')+'">'+esc(d)+'</span>'+
+      '</div><div class="bar-t"><div class="bar-f" style="width:'+(v/mx*100)+
+      '%;background:'+(DCOL[d]||'var(--faint)')+'"></div></div><div class="bar-v">'+
+      v+'% <span class="of">('+A.deptCount[d]+')</span></div></div>').join('')+'</div>'+
+    '<div class="note">This measures how regularly each team uses Claude, which spreads them '+
+    'from '+Math.round(Math.min(...dp.map(x=>x[1])))+'% to '+Math.round(mx)+'%.</div></div>';
+
+  /* per-product boards, ranked by rate, threshold applied */
+  const board2=(title,sub,key,unit,col)=>{
+    const top=all.filter(m=>m.ranked&&m[key]>0).sort((a,b)=>b[key]-a[key]).slice(0,5);
+    return '<div class="panel" style="margin:0"><div class="p-title">'+esc(title)+
+      '<span class="p-note">'+esc(sub)+'</span></div><div class="lb">'+
+      (top.length?top.map((m,i)=>'<div class="lb-row"><div class="lb-i">'+(i+1)+'</div>'+
+        '<div class="lb-n">'+esc(m.name)+'<div class="lb-s">'+esc(m.title)+'</div></div>'+
+        '<div class="lb-v" style="color:'+col+'">'+m[key].toFixed(1)+
+        '<span class="lb-u">'+esc(unit)+'</span></div></div>').join('')
+        :'<div class="lb-empty">Nobody yet.</div>')+'</div></div>';
+  };
+  h+='<div class="g3">'+
+    board2('Chat','per day of access','chatPerDay','msgs/day','var(--chat)')+
+    board2('Cowork','per day of access','coworkPerDay','msgs/day','var(--cowork)')+
+    board2('Claude Code','per day of access','codePerDay','sess/day','var(--code)')+
+    '</div>';
+
+  h+=table(null);
+  return h;
+}
+
 function vMonthly(){
+  if(isAll()) return vAllTime();
   const md=DATA.months[currentMonth];
   if(!md) return '<div class="nodata">No data for this month.</div>';
   const all=md.members, act=all.filter(m=>m.daysActive>0);
@@ -546,7 +623,7 @@ function modelPanel(){
   return '<div class="panel"><div class="p-title">Which models the spend ran on'+
     '<span class="p-note">US dollars · '+esc(M.source.split(', ')[1])+'</span></div>'+
     '<div class="key" style="margin-bottom:12px">'+key+'</div>'+rows+
-    '<div class="note warnbox"><b>This is spend, not messages.</b> '+esc(M.caveat)+'</div>'+
+    '<div class="note warnbox"><b>Spend, not messages.</b> '+esc(M.caveat)+'</div>'+
     '<div class="note">'+esc(M.derivedNote)+'</div></div>';
 }
 
@@ -571,6 +648,7 @@ function table(md){
     'title="Switch month without losing your filters">'+
     MONTHS.map(m=>'<option value="'+esc(m)+'"'+(currentMonth===m?' selected':'')+'>'+
       esc(longMonth(m))+(m===MONTHS[MONTHS.length-1]?' (so far)':'')+'</option>').join('')+
+    '<option value="'+ALLTIME+'"'+(isAll()?' selected':'')+'>All time</option>'+
     '</select>'+
     '<input class="q" id="q" placeholder="Search name, role or department" value="'+esc(term)+
     '" autocomplete="off" oninput="onSearch(this.value)">'+
@@ -579,7 +657,8 @@ function table(md){
     depts.map(d=>'<option value="'+esc(d)+'"'+(deptFilter===d?' selected':'')+'>'+esc(d)+'</option>').join('')+
     '</select>'+
     '<select class="sel" onchange="setSort(this.value)">'+
-    sorts.map(([k,l])=>'<option value="'+k+'"'+(sortKey===k?' selected':'')+'>'+esc(l)+'</option>').join('')+
+    sorts.concat(isAll()?[['pctDaysUsed','Highest % of days used']]:[])
+      .map(([k,l])=>'<option value="'+k+'"'+(sortKey===k?' selected':'')+'>'+esc(l)+'</option>').join('')+
     '</select>'+
     '<div class="key"><span class="key-i"><span class="sq sq-a"></span>Active</span>'+
     '<span class="key-i"><span class="sq sq-m"></span>Minimal</span>'+
@@ -587,36 +666,60 @@ function table(md){
     '<button class="csv" onclick="csv()">Download CSV</button>'+
     '<span class="cnt" id="cnt"></span></div>'+
     '<div class="tw" id="tbox"><table><thead><tr><th>Name / title</th><th>Department</th>'+
-    '<th class="n">Days</th><th class="n">Chat msgs</th><th class="n">Cowork msgs</th>'+
+    '<th class="n">Days used</th>'+
+    (isAll()?'<th class="n" title="Share of the days that person has had Claude on which '+
+      'they used it">% of days<br><span class="th-s">they had access</span></th>':'')+
+    '<th class="n">Chat msgs</th><th class="n">Cowork msgs</th>'+
     '<th class="n">Code sessions</th></tr></thead>'+
     '<tbody id="tb"></tbody></table></div></div>';
 }
 
 function rowsNow(){
-  const md=DATA.months[currentMonth];
+  // all-time has no single month record; each person carries their own denominator
+  const md = isAll()
+    ? {members:DATA.allTime.members, days:DATA.allTime.days, all:true}
+    : DATA.months[currentMonth];
   let r=md.members.slice();
   if(deptFilter!=='all') r=r.filter(m=>m.dept===deptFilter);
-  if(bandFilter) r=r.filter(m=>statusOf(m,md.days).k===bandFilter);
+  if(bandFilter && !md.all) r=r.filter(m=>statusOf(m,md.days).k===bandFilter);
   const t=term.trim().toLowerCase();
   if(t) r=r.filter(m=>m.name.toLowerCase().includes(t)||
     (m.title||'').toLowerCase().includes(t)||(m.dept||'').toLowerCase().includes(t));
-  r.sort((a,b)=>sortKey==='name'?a.name.localeCompare(b.name):(b[sortKey]||0)-(a[sortKey]||0));
+  r.sort((a,b)=>sortKey==='name'
+    ? (a.name||'').localeCompare(b.name||'')
+    : ((b[sortKey]||0)-(a[sortKey]||0)));
   return {r,md};
 }
 function paintRows(){
   const tb=document.getElementById('tb'); if(!tb) return;
-  const {r,md}=rowsNow(), days=md.days;
+  const {r,md}=rowsNow(), days=md.days, allv=!!md.all;
   tb.innerHTML = r.length ? r.map(m=>{
-    const st=statusOf(m,days), col=DCOL[m.dept]||'var(--faint)';
+    // in all-time each person is measured against their own days of access
+    const denom = allv ? m.availDays : days;
+    const st = denom ? statusOf(m,denom) : {k:'none',label:'No account',c:'var(--bad)'};
+    const col=DCOL[m.dept]||'var(--faint)';
     const n=(v,c)=>'<td class="n '+(v?c:'z')+'">'+(v?fmt(v):'—')+'</td>';
+    let pct='';
+    if(!allv){ pct=''; }
+    else if(m.pctDaysUsed!=null){
+      pct='<td class="n"><b>'+m.pctDaysUsed.toFixed(0)+'%</b>'+
+          (m.ranked?'':'<span class="unranked" title="Fewer than '+DATA.allTime.minDaysToRank+
+           ' days of access, so not ranked">*</span>')+'</td>';
+    }else{
+      pct='<td class="n z" title="No Claude account, so there is nothing to measure against">n/a</td>';
+    }
+    const since = allv && m.created
+      ? '<div class="nm-s">has had Claude since '+esc(niceDate(m.created))+'</div>' : '';
     return '<tr class="'+(st.k==='none'?'none':'')+'">'+
       '<td><div class="nm"><span class="nm-d" style="background:'+st.c+'" title="'+st.label+'"></span>'+
-      '<div><div class="nm-t">'+esc(m.name)+'</div><div class="nm-s">'+esc(m.title)+'</div></div></div></td>'+
+      '<div><div class="nm-t">'+esc(m.name)+'</div><div class="nm-s">'+esc(m.title)+'</div>'+
+      since+'</div></div></td>'+
       '<td><span class="chip" style="color:'+col+'">'+esc(m.dept)+'</span></td>'+
-      '<td class="days">'+m.daysActive+' / '+days+'</td>'+
+      '<td class="days">'+m.daysActive+' / '+(denom==null?'—':denom)+'</td>'+
+      pct+
       n(m.messages,'chat')+n(m.coworkMessages,'cowork')+n(m.codeSessions,'code')+
       '</tr>';
-  }).join('') : '<tr><td colspan="7" class="nodata">Nobody matches that.</td></tr>';
+  }).join('') : '<tr><td colspan="'+(isAll()?7:6)+'" class="nodata">Nobody matches that.</td></tr>';
   const c=document.getElementById('cnt');
   if(c) c.textContent=r.length+' of '+md.members.length+' members';
   /* lock height so filtering never shifts the page under the cursor */
@@ -630,16 +733,27 @@ function setSort(k){ sortKey=k; paintRows(); }
 
 function csv(){
   const {r,md}=rowsNow(); if(!r.length) return;
-  const out=r.map(m=>({Name:m.name,Title:m.title,Department:m.dept,
-    Status:statusOf(m,md.days).label,'Days active':m.daysActive,'Days in period':md.days,
-    'Chat messages':m.messages,'Cowork messages':m.coworkMessages,
-    'Code sessions':m.codeSessions}));
+  const allv=!!md.all;
+  const out=r.map(m=>{
+    const denom = allv ? m.availDays : md.days;
+    const row={Name:m.name,Title:m.title,Department:m.dept,
+      Status: denom?statusOf(m,denom).label:'No account',
+      'Days active':m.daysActive,'Days in period':denom==null?'':denom,
+      'Chat messages':m.messages,'Cowork messages':m.coworkMessages,
+      'Code sessions':m.codeSessions};
+    if(allv){
+      row['Has had Claude since']=m.created||'';
+      row['% of days used']=m.pctDaysUsed==null?'':m.pctDaysUsed;
+      row['Ranked']=m.ranked?'yes':'no';
+    }
+    return row;
+  });
   const h=Object.keys(out[0]);
   const body=[h.join(',')].concat(out.map(x=>h.map(k=>{
     const v=String(x[k]); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(','))).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([body],{type:'text/csv'}));
-  a.download='TZ_Claude_'+currentMonth.replace(' ','_')+'.csv'; a.click();
+  a.download='TZ_Claude_'+currentMonth.replace(/ /g,'_')+'.csv'; a.click();
   URL.revokeObjectURL(a.href);
 }
 
@@ -754,14 +868,13 @@ function projects(s){
       '<td class="n">'+p.conversations+'</td><td class="n">'+fmt(p.messages)+'</td>'+
       '<td>'+esc(p.created)+'</td><td>'+esc(nameOf(p.createdBy))+'</td></tr>').join('')+
     '</tbody></table></div>'+
-    '<div class="note"><b>'+pm.totalProjects+' projects exist</b>, holding '+fmt(pm.totalMessages)+
-    ' messages between them. The headline "'+pm.createdInWindow+' projects created" on Claude\'s own '+
-    'analytics counts only the last 30 days, which is why it looks so much smaller.</div>'+
-    '<div class="note"><b>Only '+pm.sharedProjects+' of '+pm.totalProjects+' have more than one user.</b> '+
-    esc(pm.sharedMeaning)+' '+pm.singleConversation+' projects were used for a single conversation and '+
-    'never returned to, which suggests people create them as a filing habit rather than a place work '+
-    'accumulates.</div>'+
-    '<div class="note warnbox"><b>This counts Chat projects only.</b> '+esc(pm.coworkNote)+'</div></div>';
+    '<div class="note"><b>'+pm.totalProjects+' projects</b> hold '+fmt(pm.totalMessages)+
+    ' messages between them, going back to March. Claude\'s own analytics shows '+
+    pm.createdInWindow+' for the last 30 days.</div>'+
+    '<div class="note"><b>'+pm.sharedProjects+' of '+pm.totalProjects+' have more than one user.</b> '+
+    esc(pm.sharedMeaning)+' '+pm.singleConversation+' hold a single conversation, so most are created '+
+    'as a filing habit rather than a place work accumulates.</div>'+
+    '<div class="note warnbox"><b>Chat projects.</b> '+esc(pm.coworkNote)+'</div></div>';
 }
 
 function historyPanel(){
@@ -783,15 +896,13 @@ function historyPanel(){
   const one = H.length<2;
   return '<div class="panel"><div class="p-title">Snapshot history'+
     '<span class="p-note">'+H.length+' capture'+(H.length===1?'':'s')+' kept</span></div>'+
-    '<div class="note" style="margin-top:0">The figures on this page come from panels that only '+
-    'ever show a rolling 30 days, and per-person spend resets every billing period. Neither can be '+
-    'recovered for a month that has passed. Each monthly refresh therefore stores a copy here, and '+
-    'this table grows into a real trend.</div>'+
+    '<div class="note" style="margin-top:0">The rolling 30-day figures and per-person spend are '+
+    'both point-in-time, so each monthly refresh stores a copy here and this table grows into a '+
+    'trend.</div>'+
     '<div class="tw"><table><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'+
-    (one?'<div class="note warnbox"><b>History starts here.</b> This is the first capture, so there '+
-      'is nothing to compare against yet. A second column appears at the next monthly refresh and a '+
-      'usable trend after three or four. Nothing in this table is back-filled or estimated — each '+
-      'column is what Claude actually reported on that date.</div>':'')+
+    (one?'<div class="note warnbox"><b>History starts here.</b> A second column appears at the '+
+      'next monthly refresh, and a usable trend after three or four. Each column is what Claude '+
+      'reported on that date.</div>':'')+
     '</div>';
 }
 
