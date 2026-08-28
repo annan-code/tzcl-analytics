@@ -18,8 +18,14 @@
   --amber:#FFB405; --link:#2E4AD9;
   --chat:#008DCE; --cowork:#BA63DA; --code:#00C0B0; --spend:#FFB405;
   --ok:#00C0B0; --warn:#FFB405; --bad:#FE8348;
-  --d-tech:#008DCE; --d-ops:#00C0B0; --d-sol:#FE8348;
-  --d-prod:#BA63DA; --d-ei:#EE9DDA; --d-ceo:#69B2F5;
+  /* Department colours. Seven teams since Engagement & Insights was split into
+     Market Development and Insights. Validated with the dataviz palette checker
+     against BOTH surfaces: no failures, no warnings, light and dark. The previous
+     set failed — Office of CEO and Engagement & Insights were 3.9 ΔE apart under
+     protanopia, effectively the same colour to a protan reader. Do not hand-pick
+     replacements without re-running the checker. */
+  --d-tech:#1F74C4; --d-ops:#00A392; --d-sol:#CF6B28;
+  --d-prod:#9B55CF; --d-mkt:#D6437A; --d-ins:#4F9B2A; --d-ceo:#8F7F1E;
 }
 body.dark{
   --bg:#1B2334; --surface:#232D42; --surface2:#1F283A; --panel:#141B29;
@@ -263,16 +269,23 @@ const gate=document.getElementById('gate'), pwEl=document.getElementById('pw'),
 async function attempt(){
   if(!pwEl.value) return;
   goEl.disabled=true; goEl.textContent='Decrypting…'; errEl.textContent='';
+  // Unlocking and drawing are deliberately kept apart. Under one shared catch, a
+  // fault in the drawing code arrives AFTER the gate has been hidden, so the error
+  // text lands on an invisible element: the reader gets a blank page, or is told
+  // the password was wrong when it was not.
+  let data;
   try{
-    DATA = await unlock(pwEl.value);
-    gate.classList.add('hide');
-    document.getElementById('page').classList.remove('hide');
-    boot();
+    data = await unlock(pwEl.value);
   }catch(e){
     errEl.textContent = /operation|decrypt/i.test(e.message||String(e))
       ? 'Wrong password.' : ('Could not open: ' + e.message);
     goEl.disabled=false; goEl.textContent='Unlock'; pwEl.select();
+    return;
   }
+  DATA = data;
+  gate.classList.add('hide');
+  document.getElementById('page').classList.remove('hide');
+  try{ boot(); }catch(e){ showFailure(e); }
 }
 goEl.addEventListener('click', attempt);
 pwEl.addEventListener('keydown', e => { if(e.key==='Enter') attempt(); });
@@ -284,7 +297,8 @@ let deptFilter='all', bandFilter=null, sortKey='name', term='', hidden={}, helpO
 
 const DCOL={'Technology':'var(--d-tech)','Operations':'var(--d-ops)',
   'Solutions Engineering':'var(--d-sol)','Product':'var(--d-prod)',
-  'Engagement & Insights':'var(--d-ei)','Office of CEO':'var(--d-ceo)'};
+  'Market Development':'var(--d-mkt)','Insights':'var(--d-ins)',
+  'Office of CEO':'var(--d-ceo)'};
 const CAT=['#008DCE','#00C0B0','#FE8348','#BA63DA','#EE9DDA','#69B2F5','#D9DA7E'];
 
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -341,15 +355,31 @@ function toggleMode(){
   render();
 }
 
+// Shown instead of an empty page when the data opened but the page could not be
+// built. Says which panel failed and why, so the fault is reportable rather than
+// looking like the dashboard is broken or the password was refused.
+function showFailure(e){
+  const msg = (e && e.message) ? e.message : String(e);
+  document.getElementById('app').innerHTML =
+    '<div class="panel"><div class="p-title">This page could not be drawn</div>'+
+    '<div class="note" style="margin-top:0">The password was accepted and the data opened. '+
+    'Something then went wrong building the <b>'+esc(view)+'</b> view, which usually means '+
+    'the data file and the page have gone out of step. The other tabs above may still work.</div>'+
+    '<div class="note">Pass this line on with the date: <b>'+esc(msg)+'</b></div></div>';
+  console.error('dashboard render failed', e);
+}
+
 function render(){
   if(!DATA) return;
-  document.getElementById('app').innerHTML =
-    view==='monthly'?vMonthly(): view==='usage'?vUsage(): vCost();
-  if(view==='monthly') paintRows();
-  document.getElementById('foot').innerHTML =
-    'Monthly figures: '+esc(DATA.meta.monthlySource)+'.<br>'+
-    'Usage detail and cost: '+esc(DATA.snapshot.source)+', fetched '+
-    esc(niceDate(DATA.snapshot.fetchedAt.slice(0,10)))+'.';
+  try{
+    document.getElementById('app').innerHTML =
+      view==='monthly'?vMonthly(): view==='usage'?vUsage(): vCost();
+    if(view==='monthly') paintRows();
+    document.getElementById('foot').innerHTML =
+      'Monthly figures: '+esc(DATA.meta.monthlySource)+'.<br>'+
+      'Usage detail and cost: '+esc(DATA.snapshot.source)+', fetched '+
+      esc(niceDate(DATA.snapshot.fetchedAt.slice(0,10)))+'.';
+  }catch(e){ showFailure(e); }
 }
 
 function howTo(){
@@ -400,7 +430,9 @@ function windowNote(){
         'complete days only</span>':'')+
       '<span class="sep">·</span>Data accurate to <b>'+esc(niceDate(s.dataAsOf))+'</b></div>';
   }
-  return '<div class="wnote">'+esc(view==='cost'?'Month to date · 1 – 10 August 2026 · USD':s.window)+
+  // Only the Monthly and Usage views call this; the Cost view builds its own
+  // header from cost.reportedMonth. There is deliberately no cost branch here.
+  return '<div class="wnote">'+esc(s.window)+
     '<span class="sep">·</span>Data accurate to <b>'+esc(niceDate(s.dataAsOf))+'</b></div>';
 }
 
@@ -797,18 +829,27 @@ function depth(s){
       '<div class="bar-v">'+v+' ('+Math.round(v/seats*100)+'%)</div></div>').join('');
   return '<div class="panel" style="margin:0"><div class="p-title">Depth of adoption'+
     '<span class="p-note">of the '+seats+' current members · rolling 30 days to '+niceDate(s.dataAsOf)+'</span></div><div class="bars">'+rows+'</div>'+
-    '<div class="note">Breadth is strong and depth is thin. Nearly everyone has used Claude at some '+
-    'point this month, but only <b>'+a.daily+'</b> used it yesterday. Daily use is the number to move.</div></div>';
+    '<div class="note">'+
+    (a.daily/seats>=0.5
+      ? 'Nearly everyone has used Claude this month, and <b>'+a.daily+'</b> of '+seats+' used it yesterday. '+
+        'Daily use is the measure that shows it has become habit rather than an occasional tool.'
+      : 'Breadth is strong and depth is thinner. Nearly everyone has used Claude at some point this month, '+
+        'but only <b>'+a.daily+'</b> used it yesterday. Daily use is the number to move.')+
+    '</div></div>';
 }
 function sticky(s){
+  const peak=Math.max(0.25, ...s.stickiness.map(p=>p.dauMau));
+  const top=s.stickiness.reduce((a,b)=>b.dauMau>a.dauMau?b:a, s.stickiness[0]);
+  const unused=s.stickiness.filter(p=>!p.dauMau);
   const rows=s.stickiness.map((p,i)=>'<div class="bar"><div class="bar-l">'+esc(p.product)+'</div>'+
-    '<div class="bar-t"><div class="bar-f" style="width:'+Math.min(100,p.dauMau/0.25*100)+
+    '<div class="bar-t"><div class="bar-f" style="width:'+Math.min(100,p.dauMau/peak*100)+
     '%;background:'+CAT[i]+'"></div></div><div class="bar-v">'+pc(p.dauMau)+'</div></div>').join('');
   return '<div class="panel" style="margin:0"><div class="p-title">Product stickiness'+
     '<span class="p-note">daily actives as a share of monthly actives</span></div>'+
     '<div class="bars">'+rows+'</div><div class="note">A higher share means people return day after day '+
-    'rather than dipping in occasionally. Cowork is the stickiest at '+pc(s.stickiness[0].dauMau)+
-    '. Office Agents is provisioned but unused.</div></div>';
+    'rather than dipping in occasionally. '+esc(top.product)+' is the stickiest at '+pc(top.dauMau)+
+    (unused.length? '. '+esc(unused.map(p=>p.product).join(' and '))+' '+(unused.length>1?'are':'is')+
+     ' provisioned but unused.' : '.')+'</div></div>';
 }
 function fileCats(s){
   const f=s.fileCategories;
@@ -832,16 +873,29 @@ function skills(s){
     'get used, which is the cheapest lever we have for raising adoption.</div></div>';
 }
 function connectors(s){
-  const g=s.connectors.find(c=>c.connector==='Granola');
+  const noWrite = s.connectors.filter(c => !c.writes);
+  const totR = s.connectors.reduce((a,c)=>a+c.reads,0);
+  const totW = s.connectors.reduce((a,c)=>a+c.writes,0);
   return '<div class="panel" style="margin:0"><div class="p-title">Connectors'+
     '<span class="p-note">tools Claude reads from and writes back to</span></div>'+
     '<div class="tw"><table><thead><tr><th>Connector</th><th class="n">Users</th><th class="n">Reads</th>'+
     '<th class="n">Writes</th></tr></thead><tbody>'+s.connectors.map(c=>'<tr><td>'+esc(c.connector)+
       '</td><td class="n">'+c.users+'</td><td class="n">'+fmt(c.reads)+'</td>'+
       '<td class="n'+(c.writes?'':' z')+'">'+(c.writes?fmt(c.writes):'—')+'</td></tr>').join('')+
-    '</tbody></table></div><div class="note">Reads far exceed writes everywhere. Granola has '+
-    fmt(g?g.reads:0)+' reads and no writes at all, so meeting notes are being read but nothing goes '+
-    'back. That gap is where automation would pay.</div></div>';
+    '</tbody></table></div><div class="note">'+
+    (totW ? 'Across these connectors Claude reads '+fmt(totR)+' times and writes back '+fmt(totW)+
+            ', a ratio of about '+Math.round(totR/totW)+' to 1. ' : '')+
+    (noWrite.length
+      ? esc(noWrite.map(c=>c.connector).join(' and '))+' '+(noWrite.length>1?'are':'is')+
+        ' read from but never written to, which is where automation would pay.'
+      : 'Every connector is written to as well as read from.')+
+    '</div></div>';
+}
+// Earliest month that still has a surviving project. Typed in as "March" before,
+// which would have been wrong the moment the March projects were deleted.
+function firstMon(pm){
+  const m=(pm.createdByMonth||[]).find(x=>x[1]>0);
+  return m ? (MONL[m[0]]||m[0]) : 'the start of the year';
 }
 function projects(s){
   const pm=s.projectsMeta, all=s.projectsAll;
@@ -854,7 +908,7 @@ function projects(s){
   return '<div class="panel"><div class="p-title">Projects'+
     '<span class="p-note">all '+pm.totalProjects+', from '+esc(pm.source.split(', ')[1])+'</span></div>'+
     '<div class="cards" style="margin-bottom:14px">'+
-      card('Projects in total',pm.totalProjects,'Created since March, by '+pm.distinctCreators+' different people','chat')+
+      card('Projects in total',pm.totalProjects,'Created since '+esc(firstMon(pm))+', by '+pm.distinctCreators+' different people','chat')+
       card('Shared with someone',pm.sharedProjects,'The other '+(pm.totalProjects-pm.sharedProjects)+' have a single user','cowork')+
       card('Used once and dropped',pm.singleConversation,'Only one conversation ever started in them','')+
     '</div>'+
@@ -869,7 +923,7 @@ function projects(s){
       '<td>'+esc(p.created)+'</td><td>'+esc(nameOf(p.createdBy))+'</td></tr>').join('')+
     '</tbody></table></div>'+
     '<div class="note"><b>'+pm.totalProjects+' projects</b> hold '+fmt(pm.totalMessages)+
-    ' messages between them, going back to March. Claude\'s own analytics shows '+
+    ' messages between them, going back to '+esc(firstMon(pm))+'. Claude\'s own analytics shows '+
     pm.createdInWindow+' for the last 30 days.</div>'+
     '<div class="note"><b>'+pm.sharedProjects+' of '+pm.totalProjects+' have more than one user.</b> '+
     esc(pm.sharedMeaning)+' '+pm.singleConversation+' hold a single conversation, so most are created '+
@@ -887,7 +941,7 @@ function historyPanel(){
     ['Pull requests',      c=>fmt(c.outputs.prsCreated)],
     ['Projects in total',  c=>c.projectsTotal],
     ['Projects shared',    c=>c.projectsShared],
-    ['Metered spend',      c=>'\u00a3'+c.meteredTotalGBP.toFixed(2)],
+    ['Metered spend',      c=>'\u00a3'+Number(c.meteredTotalGBP).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})],
     ['People billed',      c=>c.meteredUsersBilled],
   ];
   const head='<tr><th>Measure</th>'+H.map(c=>'<th class="n">'+esc(niceDate(c.capturedAt))+'</th>').join('')+'</tr>';
@@ -941,6 +995,25 @@ function vCost(){
   const gbp=n=>'£'+Number(n).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
   const usd=n=>'$'+Math.round(Number(n)).toLocaleString('en-GB');
 
+  // Every month name on this page is derived from c.reportedMonth, never typed in.
+  // The month pills are hidden on this view, so nothing here can be switched by the
+  // reader — it always reports the last closed billing month. Typing the name in
+  // meant a rebuild moved the figures forward while the labels stayed behind.
+  const rmLong = String(c.reportedMonth||'').split(' ')[0];
+  const rmAbbr = Object.keys(MONL).find(k=>MONL[k]===rmLong);
+
+  // States the difference between the next invoice and the last one as arithmetic
+  // on the two figures already on this page. No judgement about what it means.
+  // States the difference between the next invoice and the last one as arithmetic
+  // on the two figures already on this page. The seat count and the billed member
+  // count are different things, so they are never subtracted from one another.
+  function cmpToLast(){
+    const dAmt = c.nextInvoice.projected - c.subscription.amount;
+    if(!dAmt) return '';
+    return (dAmt<0?'Lower':'Higher')+' than the '+esc(rmLong)+' invoice of '+
+           gbp(c.subscription.amount)+', which covered '+c.subscription.members+' billed members.';
+  }
+
   let h='<div class="wnote"><b>'+esc(c.reportedMonth)+'</b><span class="sep">·</span>'+
     'Invoices from the Claude billing page<span class="sep">·</span>'+
     'Usage from the analytics API</div>';
@@ -969,17 +1042,18 @@ function vCost(){
       '<div class="k-num" style="font-size:2rem">'+gbp(c.nextInvoice.projected)+'</div>'+
       '<div class="k-sub" style="margin-top:12px">Due '+esc(c.nextInvoice.date)+', for '+
       c.nextInvoice.seats+' seats with '+c.nextInvoice.seatsAvailable+' unused. '+
-      'Lower than July despite more seats, which is worth understanding before reading a trend into it.'+
-      '</div></div></div>';
+      cmpToLast()+'</div></div></div>';
 
-  /* what the usage went on, this month */
-  const jul=c.usageByMonth.find(m=>m.month==='Jul');
-  const parts=[['Claude Code',jul.code,'var(--code)'],['Chat',jul.chat,'var(--chat)'],
-               ['Cowork',jul.cowork,'var(--cowork)'],['Other',jul.other,'var(--faint)']]
+  /* what the usage went on, in the month being reported */
+  const row=c.usageByMonth.find(m=>m.month===rmAbbr);
+  if(!row) throw new Error('no usage breakdown for '+(rmLong||'the reported month')+
+                           ' — check reportedMonth against usageByMonth in the data');
+  const parts=[['Claude Code',row.code,'var(--code)'],['Chat',row.chat,'var(--chat)'],
+               ['Cowork',row.cowork,'var(--cowork)'],['Other',row.other,'var(--faint)']]
               .filter(p=>p[1]>0).sort((a,b)=>b[1]-a[1]);
   const mx=Math.max(...parts.map(p=>p[1]));
   h+='<div class="panel"><div class="p-title">What the usage went on'+
-    '<span class="p-note">July, in US dollars</span></div><div class="bars">'+
+    '<span class="p-note">'+esc(rmLong)+', in US dollars</span></div><div class="bars">'+
     parts.map(([l,v,col])=>'<div class="bar"><div class="bar-l">'+l+'</div><div class="bar-t">'+
       '<div class="bar-f" style="width:'+(v/mx*100)+'%;background:'+col+'"></div></div>'+
       '<div class="bar-v">'+usd(v)+'</div></div>').join('')+'</div></div>';
